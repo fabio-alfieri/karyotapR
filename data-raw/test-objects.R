@@ -70,17 +70,20 @@ forcats::fct_count(colData(exp3.subset)$cluster)
 summary(rowData(exp3.subset)$median.reads > 0)
 exp3.subset <- exp3.subset[rowData(exp3.subset)$median.reads > 0,] #1 probe filtered for exp 3
 exp3.subset <- calcNormCounts(exp3.subset)
+
 control.copy.number <- generateControlCopyNumberTemplate(exp3.subset, sample.feature.label = "RPE1")
-control.copy.number["10q", "copy.number"] <- 3
-exp3.subset <- calcCopyNumber(exp3.subset, control.copy.number = control.copy.number, sample.feature = "cluster", remove.bad.probes = T)
-exp3.subset <- calcSmoothCopyNumber(exp3.subset)
+control.copy.number["chr10q", "copy.number"] <- 3
+exp3.subset <- calcCopyNumber(exp3.subset, control.copy.number = control.copy.number, sample.feature = "cluster")
+
+exp3.subset <- calcSmoothCopyNumber(exp3.subset, method = "median")
 exp3.subset <- calcGMMCopyNumber(exp3.subset, cell.barcodes = colnames(exp3.subset), control.copy.number = control.copy.number, model.components = 1:4)
+
+exp3.subset <- calcSmoothCopyNumber(exp3.subset, method = "weighted.median", control.copy.number = control.copy.number)
+exp3.subset <- calcGMMCopyNumber(exp3.subset, cell.barcodes = colnames(exp3.subset), control.copy.number = control.copy.number, model.components = 1:4, 
+                                 smoothing.method = "weighted.median")
 
 assayHeatmap(exp3.subset, assay = "copyNumber", split.col.by = "chr", split.row.by = "cluster", annotate.row.by = "sample.grna", color.preset = "copy.number.denoise")
 assayHeatmap(exp3.subset, alt.exp = "smoothedCopyNumberByChr", assay = "discreteCopyNumber", split.row.by = "cluster", annotate.row.by = "sample.grna", color.preset = "copy.number")
-assayHeatmap(exp3.subset, alt.exp = "smoothedCopyNumberByChr", assay = "gmmCopyNumber", split.row.by = "cluster", annotate.row.by = "sample.grna", color.preset = "copy.number")
-assayHeatmap(exp3.subset, alt.exp = "smoothedCopyNumberByArm", assay = "gmmCopyNumber", split.row.by = "cluster", annotate.row.by = "sample.grna", color.preset = "copy.number")
-assayHeatmap(exp3.subset, alt.exp = "smoothedCopyNumberByArm", assay = "smoothedCopyNumber", split.row.by = "cluster", annotate.row.by = "sample.grna", color.preset = "copy.number")
 assayBoxPlot(exp3.subset, alt.exp = "chrYCounts", split.features = TRUE, split.x.by = "cluster")
 
 getTidyData(exp3.subset)

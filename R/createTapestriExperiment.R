@@ -18,6 +18,10 @@
 #' ## CO610
 #' - `barcodeProbe` = "CO610_AMP351"
 #' - `grnaProbe` = "CO610_AMP350"
+#' 
+#' ## CO810
+#' - `barcodeProbe` = "TAMPL46684"
+#' - `grnaProbe` = "TAMPL46683"
 #'
 #' # Automatic Operations
 #' ## Raw Data
@@ -45,7 +49,7 @@
 #' Any remaining probes that are not targeting a human chromosome and are not specified by the shortcut tags are moved to the `otherProbeCounts` slot.
 #'
 #' @param h5.filename File path for `.h5` file from Tapestri Pipeline output.
-#' @param panel.id Character, Tapestri panel ID, either CO261, CO293, CO610, or `NULL`. Initializes `barcodeProbe` and `grnaProbe` slots. Default `NULL`.
+#' @param panel.id Character, Tapestri panel ID, either CO261, CO293, CO610, CO810, or `NULL`. Initializes `barcodeProbe` and `grnaProbe` slots. Default `NULL`.
 #' @param get.cytobands Logical, if `TRUE` (default), retrieve and add chromosome cytobands and chromosome arms to `rowData` (probe metadata).
 #' @param genome Character, reference genome for pulling cytoband coordinates and chromosome arm labels (see [getCytobands()]). Only "hg19" (default) is currently supported.
 #' @param move.non.genome.probes Logical, if `TRUE` (default), move counts and metadata from non-genomic probes to `altExp` slots (see [moveNonGenomeProbes()]).
@@ -246,8 +250,11 @@ createTapestriExperiment <- function(h5.filename,
   } else if (panel.id == "CO610") {
     barcodeProbe <- "CO610_AMP351"
     grnaProbe <- "CO610_AMP350"
+  } else if (panel.id == "CO810") {
+    barcodeProbe <- "TAMPL46684"
+    grnaProbe <- "TAMPL46683"
   } else {
-    cli::cli_abort("{.var panel.id} {.q {panel.id}} is not recognized. Please specify CO261, CO293, CO610, or NULL for manual settings.", )
+    cli::cli_abort("{.var panel.id} {.q {panel.id}} is not recognized. Please specify CO261, CO293, CO610, CO810, or NULL for manual settings.", )
   }
 
   return(list(barcode.probe = barcodeProbe, grna.probe = grnaProbe))
@@ -351,6 +358,8 @@ createTapestriExperiment <- function(h5.filename,
     probe.metadata <- co293.metadata
   } else if (panel.id == "CO610") {
     probe.metadata <- co610.metadata
+  } else if (panel.id == "CO810") {
+      probe.metadata <- co810.metadata
   }
 
   if (!all(rownames(read.counts.raw) %in% probe.metadata$probe.id)) {

@@ -31,4 +31,13 @@ tap <- createTapestriExperiment(tap.file, panel.id = "CO610", get.cytobands = FA
 co610.metadata <- as.data.frame(rowData(tap))
 co610.metadata <- co610.metadata[,1:4]
 
-usethis::use_data(cytoband.hg19.genomicRanges, co293.metadata, co261.metadata, co610.metadata, overwrite = TRUE, internal = TRUE)
+#usethis::use_data(cytoband.hg19.genomicRanges, co293.metadata, co261.metadata, co610.metadata, overwrite = TRUE, internal = TRUE)
+
+#CO810 panel metadata
+#tap.file is arbitrary .h5 tapestri pipeline file using CO810 panel
+tap <- createTapestriExperiment(tap.file, panel.id = "CO810", get.cytobands = FALSE, move.non.genome.probes = FALSE, filter.variants = TRUE)
+co810.metadata <- as.data.frame(rowData(tap))
+co810.metadata <- co810.metadata[,1:4]
+co810.metadata <- dplyr::arrange(co810.metadata, chr, start.pos) #sort by probe order
+
+usethis::use_data(cytoband.hg19.genomicRanges, co293.metadata, co261.metadata, co610.metadata, co810.metadata, overwrite = TRUE, internal = TRUE)

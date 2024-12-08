@@ -32,6 +32,7 @@ Imports:
     gtools,
     IRanges,
     magrittr,
+    matrixStats,
     methods,
     purrr,
     rhdf5,

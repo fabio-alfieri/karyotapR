@@ -75,9 +75,13 @@ calcGMMCopyNumber <- function(TapestriExperiment,
 
   # smooth counts from simulated cells into smoothed copy number values
   cli::cli_progress_step("Fitting Gaussian distributions to simulated cells...")
+  smoothing.method <- S4Vectors::metadata(TapestriExperiment)$smoothing.method
+  smoothing.weights <- S4Vectors::metadata(TapestriExperiment)$smoothing.weights
   simulated.tapestri.experiment <- .smoothSimulatedCells(
     normalized.counts = simulated.norm.counts,
     probe.metadata = rowData(TapestriExperiment),
+    smoothing.method = smoothing.method,
+    smoothing.weights = smoothing.weights,
     ...
   )
 
@@ -209,6 +213,8 @@ calcGMMCopyNumber <- function(TapestriExperiment,
 # smooth simulated counts into copy number values
 .smoothSimulatedCells <- function(normalized.counts,
                                   probe.metadata,
+                                  smoothing.method,
+                                  smoothing.weights,
                                   genome = "hg19") {
   # generate tapestri experiment object and copy normcounts slot
   tapestri.sim <- .createTapestriExperiment.sim(
@@ -226,7 +232,10 @@ calcGMMCopyNumber <- function(TapestriExperiment,
 
   control.cn <- generateControlCopyNumberTemplate(tapestri.sim, copy.number = 2, sample.feature.label = "sim_cn2")
   tapestri.sim <- calcCopyNumber(tapestri.sim, control.copy.number = control.cn, sample.feature = "cn.sim.class")
-  tapestri.sim <- suppressMessages(calcSmoothCopyNumber(tapestri.sim))
+  
+  cli::cli_progress_step("Smoothing copy number by {smoothing.method}...")
+  tapestri.sim <- suppressMessages(calcSmoothCopyNumber(tapestri.sim, method = smoothing.method, 
+                                   control.copy.number = control.cn, sample.feature = "cn.sim.class", weight.range = smoothing.weights))
 }
 
 # fit Gaussian distributions to simulated cells
