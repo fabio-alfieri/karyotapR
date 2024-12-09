@@ -238,14 +238,14 @@ calcSmoothCopyNumber <- function(TapestriExperiment,
   # reorder to match input matrix
   smoothed.ploidy.arm <- smoothed.ploidy.arm[, colnames(ploidy.counts)]
   
+  ploidy.tidy$cytoband <- paste0(substr(ploidy.tidy$arm, 1, nchar(as.character(ploidy.tidy$arm))-1), ploidy.tidy$cytoband)
+
   smoothed.ploidy.cytob <- ploidy.tidy %>%
-    dplyr::group_by(.data$cell.barcode, .data$cytoband, .data$arm) %>%
+    dplyr::group_by(.data$cell.barcode, .data$cytoband) %>%
     dplyr::summarize(
       smooth.ploidy = smooth.func(.data$ploidy),
       .groups = "drop"
-    ) 
-  smoothed.ploidy.cytob$cytoband <- paste0(smoothed.ploidy.cytob$arm, smoothed.ploidy.cytob$cytoband)
-  smoothed.ploidy.cytob <- smoothed.ploidy.cytob %>%
+    ) %>%
     tidyr::pivot_wider(
       id_cols = dplyr::all_of("cytoband"),
       values_from = dplyr::all_of("smooth.ploidy"),
@@ -253,6 +253,9 @@ calcSmoothCopyNumber <- function(TapestriExperiment,
     ) %>%
     tibble::column_to_rownames("cytoband")
   
+  smoothed.ploidy.cytob <- smoothed.ploidy.cytob[, colnames(ploidy.counts)]
+  
+
   discrete.ploidy.chr <- round(smoothed.ploidy.chr, 0)
   discrete.ploidy.arm <- round(smoothed.ploidy.arm, 0)
   discrete.ploidy.cytob <- round(smoothed.ploidy.cytob, 0)
