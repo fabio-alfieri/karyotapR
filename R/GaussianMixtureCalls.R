@@ -155,7 +155,8 @@ calcGMMCopyNumber <- function(TapestriExperiment,
     as.data.frame() %>%
     magrittr::set_rownames(cn.model.table.cytob$feature.id)
 
-  SummarizedExperiment::assay(altExp(TapestriExperiment, "smoothedCopyNumberByCytob"), "gmmCopyNumber") <- class.labels.cytob.df
+  print(class.labels.cytob.df)
+  # SummarizedExperiment::assay(altExp(TapestriExperiment, "smoothedCopyNumberByCytob"), "gmmCopyNumber") <- class.labels.cytob.df
 
   TapestriExperiment@gmmParams <- list("chr" = cn.model.table.chr, "arm" = cn.model.table.arm, "cytoband" = cn.model.table.cytob)
   cli::cli_bullets(c("v" = "Saving GMM models and metadata to {.var gmmParams} slot..."))
