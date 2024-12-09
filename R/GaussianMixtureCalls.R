@@ -145,7 +145,7 @@ calcGMMCopyNumber <- function(TapestriExperiment,
   # cytobands
   cli::cli_bullets(c("v" = "Saving chromosome arm copy number calls to altExp: smoothedCopyNumberByArm, assay: gmmCopyNumber..."))
 
-  class.labels.cytob.df <- cn.model.tabl.cytob %>%
+  class.labels.cytob.df <- cn.model.table.cytob %>%
     dplyr::pull("cn.class") %>%
     purrr::map(\(x) tidyr::pivot_wider(x,
       names_from = "cell.barcode",
@@ -153,7 +153,7 @@ calcGMMCopyNumber <- function(TapestriExperiment,
     )) %>%
     purrr::list_rbind() %>%
     as.data.frame() %>%
-    magrittr::set_rownames(cn.model.tabl.cytob$feature.id)
+    magrittr::set_rownames(cn.model.table.cytob$feature.id)
 
   SummarizedExperiment::assay(altExp(TapestriExperiment, "smoothedCopyNumberByArm"), "gmmCopyNumber") <- class.labels.cytob.df
 
