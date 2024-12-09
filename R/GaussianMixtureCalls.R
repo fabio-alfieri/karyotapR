@@ -246,6 +246,7 @@ calcGMMCopyNumber <- function(TapestriExperiment,
   SummarizedExperiment::colData(tapestri.sim)$cn.sim.class <- as.factor(cn.sim.class)
 
   control.cn <- generateControlCopyNumberTemplate(tapestri.sim, copy.number = 2, sample.feature.label = "sim_cn2")
+  control.cn$cytoband <- str_replace(control.cn$cytoband, '_','')
   tapestri.sim <- calcCopyNumber(tapestri.sim, control.copy.number = control.cn, sample.feature = "cn.sim.class")
   
   cli::cli_progress_step("Smoothing copy number by {smoothing.method}...")
