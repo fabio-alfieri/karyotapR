@@ -187,8 +187,11 @@ calcGMMCopyNumber <- function(TapestriExperiment,
   # multiply scale parameter by scalar value
   probe.transform <- SingleCellExperiment::rowData(TapestriExperiment) %>%
     tibble::as_tibble() %>%
-    dplyr::select("probe.id", "cytoband") %>%
+    dplyr::select("probe.id","chr", "cytoband") 
+  probe.transform$cytoband <- paste0('chr',probe.transform$chr,probe.transform$cytoband)
+  probe.transform <- probe.transform %>%
     dplyr::inner_join(control.copy.number %>% dplyr::select(!c("sample.label")), by = "cytoband")
+
   probe.transform <- probe.transform %>% dplyr::mutate("scalar" = purrr::map(.data$copy.number, \(x) 1:6 / x))
   probe.transform <- dplyr::inner_join(probe.transform, probe.model.fit, by = "probe.id")
   probe.transform <- probe.transform %>% dplyr::mutate("scale.transform" = purrr::map2(.data$scalar, .data$scale, \(x, y) x * y))
