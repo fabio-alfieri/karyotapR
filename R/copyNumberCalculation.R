@@ -205,6 +205,10 @@ calcSmoothCopyNumber <- function(TapestriExperiment, method = "median", control.
   #get weight for each probe
   if(method == "weighted.median"){
 
+    tap.exp.row.data <- as.data.frame(SummarizedExperiment::rowData(TapestriExperiment))[, c("probe.id", "chr", "cytoband")]
+    tap.exp.row.data$cytoband <- paste0('chr',tap.exp.row.data$chr,tap.exp.row.data$cytoband)
+
+
       tap.exp.row.data <- tap.exp.row.data %>% dplyr::left_join(control.copy.number, by = "cytoband")
         
       tap.exp.row.data$probe.weight <- tap.exp.row.data[, c("probe.id", "copy.number", "sample.label")] %>% 
