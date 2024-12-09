@@ -75,6 +75,7 @@ calcGMMCopyNumber <- function(TapestriExperiment,
   # fit Gaussian distributions to simulated cells
   cn.model.params.chr <- .fitGaussianDistributions(simulated.tapestri.experiment = simulated.tapestri.experiment, chromosome.scope = "chr")
   cn.model.params.arm <- .fitGaussianDistributions(simulated.tapestri.experiment = simulated.tapestri.experiment, chromosome.scope = "arm")
+  cn.model.params.cytob <- .fitGaussianDistributions(simulated.tapestri.experiment = simulated.tapestri.experiment, chromosome.scope = "cytoband")
 
   # calculate posterior probabilities for each data point under each model component
   cli::cli_progress_step("Calculating posterior probabilities...")
@@ -92,17 +93,26 @@ calcGMMCopyNumber <- function(TapestriExperiment,
     model.priors = model.priors,
     chromosome.scope = "arm"
   )
+  cn.model.table.cytob <- .calcClassPosteriors(
+    TapestriExperiment = TapestriExperiment,
+    cn.model.params = cn.model.params.arm,
+    model.components = model.components,
+    model.priors = model.priors,
+    chromosome.scope = "cytoband"
+  )
+
 
   # call copy number values from posterior probabilities
   cli::cli_progress_step("Calling copy number from posterior probabilities...")
   cn.model.table.chr <- .callCopyNumberClasses(cn.model.table.chr)
   cn.model.table.arm <- .callCopyNumberClasses(cn.model.table.arm)
+  cn.model.table.cytob <- .callCopyNumberClasses(cn.model.table.cytob)
   cli::cli_progress_done()
 
   # transform copy number calls to matrix
   # add copy number calls and model metadata to TapestriExperiment
 
-  # whole chromosome
+  # whole chromosomes
   cli::cli_bullets(c("v" = "Saving whole chromosome copy number calls to altExp: smoothedCopyNumberByChr, assay: gmmCopyNumber..."))
 
   class.labels.chr.df <- cn.model.table.chr %>%
@@ -132,7 +142,22 @@ calcGMMCopyNumber <- function(TapestriExperiment,
 
   SummarizedExperiment::assay(altExp(TapestriExperiment, "smoothedCopyNumberByArm"), "gmmCopyNumber") <- class.labels.arm.df
 
-  TapestriExperiment@gmmParams <- list("chr" = cn.model.table.chr, "arm" = cn.model.table.arm)
+  # cytobands
+  cli::cli_bullets(c("v" = "Saving chromosome arm copy number calls to altExp: smoothedCopyNumberByArm, assay: gmmCopyNumber..."))
+
+  class.labels.cytob.df <- cn.model.tabl.cytob %>%
+    dplyr::pull("cn.class") %>%
+    purrr::map(\(x) tidyr::pivot_wider(x,
+      names_from = "cell.barcode",
+      values_from = "cn.class"
+    )) %>%
+    purrr::list_rbind() %>%
+    as.data.frame() %>%
+    magrittr::set_rownames(cn.model.tabl.cytob$feature.id)
+
+  SummarizedExperiment::assay(altExp(TapestriExperiment, "smoothedCopyNumberByArm"), "gmmCopyNumber") <- class.labels.cytob.df
+
+  TapestriExperiment@gmmParams <- list("chr" = cn.model.table.chr, "arm" = cn.model.table.arm, "cytoband" = cn.model.table.cytob)
   cli::cli_bullets(c("v" = "Saving GMM models and metadata to {.var gmmParams} slot..."))
   cli::cli_progress_done()
 
@@ -238,8 +263,13 @@ calcGMMCopyNumber <- function(TapestriExperiment,
       alt.exp = "smoothedCopyNumberByArm",
       assay = "smoothedCopyNumber"
     )
+  } else if (chromosome.scope == "cytoband") {
+    sim.data.tidy <- getTidyData(simulated.tapestri.experiment,
+      alt.exp = "smoothedCopyNumberByCytob",
+      assay = "smoothedCopyNumber"
+    )
   } else {
-    cli::cli_abort("chromosome.scope should be 'chr or 'arm'")
+    cli::cli_abort("chromosome.scope should be 'chr', 'arm' or 'cytoband")
   }
 
   # fit Gaussian distributions
@@ -267,8 +297,13 @@ calcGMMCopyNumber <- function(TapestriExperiment,
       alt.exp = "smoothedCopyNumberByArm",
       assay = "smoothedCopyNumber"
     )
+  } else if (chromosome.scope == "cytoband") {
+    sim.data.tidy <- getTidyData(TapestriExperiment,
+      alt.exp = "smoothedCopyNumberByCytob",
+      assay = "smoothedCopyNumber"
+    )
   } else {
-    cli::cli_abort("chromosome.scope should be 'chr or 'arm'")
+    cli::cli_abort("chromosome.scope should be 'chr', 'arm' or 'cytoband'")
   }
 
   # get smoothed copy number and combine in tibble with copy number model parameters
@@ -348,6 +383,8 @@ getGMMBoundaries <- function(TapestriExperiment, chromosome.scope = "chr") {
     model.metadata <- TapestriExperiment@gmmParams$chr
   } else if (chromosome.scope == "arm") {
     model.metadata <- TapestriExperiment@gmmParams$arm
+  } else if (chromosome.scope == "cytoband") {
+    model.metadata <- TapestriExperiment@gmmParams$cytoband
   } else {
     cli::cli_abort("chromosome.scope should be 'chr or 'arm'")
   }
@@ -429,8 +466,10 @@ plotCopyNumberGMM <- function(TapestriExperiment,
     model.metadata <- TapestriExperiment@gmmParams$chr
   } else if (chromosome.scope == "arm") {
     model.metadata <- TapestriExperiment@gmmParams$arm
+  } else if (chromosome.scope == "cytoband") {
+    model.metadata <- TapestriExperiment@gmmParams$cytoband
   } else {
-    cli::cli_abort("chromosome.scope should be 'chr or 'arm'")
+    cli::cli_abort("chromosome.scope should be 'chr', 'arm' or 'cytoband'")
   }
 
   if (length(feature.id) != 1) {
