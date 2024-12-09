@@ -253,8 +253,13 @@ calcSmoothCopyNumber <- function(TapestriExperiment,
     ) %>%
     tibble::column_to_rownames("cytoband")
   
+  # reorder to march input matrix
   smoothed.ploidy.cytob <- smoothed.ploidy.cytob[, colnames(ploidy.counts)]
   
+  # reorder cytobands
+  smoothed.ploidy.cytob <- smoothed.ploidy.cytob[order(match(rownames(smoothed.ploidy.cytob), 
+               ploidy.tidy$cytoband)), , drop = FALSE]
+
 
   discrete.ploidy.chr <- round(smoothed.ploidy.chr, 0)
   discrete.ploidy.arm <- round(smoothed.ploidy.arm, 0)
