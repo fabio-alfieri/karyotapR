@@ -299,7 +299,7 @@ calcSmoothCopyNumber <- function(TapestriExperiment, method = "median", control.
 
   }else if(method == "weighted.median"){  #weighed median smoothing 
       
-      ploidy.tidy <- ploidy.tidy %>% dplyr::left_join(tap.exp.row.data[, c("probe.id", "chr", "arm", "probe.weight")], by = "probe.id")
+      ploidy.tidy <- ploidy.tidy %>% dplyr::left_join(tap.exp.row.data[, c("probe.id", "chr", "arm", "cytoband", "probe.weight")], by = "probe.id")
       
       # whole chromosome
       smoothed.ploidy.chr <- ploidy.tidy %>% 
