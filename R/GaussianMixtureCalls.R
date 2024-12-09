@@ -95,7 +95,7 @@ calcGMMCopyNumber <- function(TapestriExperiment,
   )
   cn.model.table.cytob <- .calcClassPosteriors(
     TapestriExperiment = TapestriExperiment,
-    cn.model.params = cn.model.params.arm,
+    cn.model.params = cn.model.params.cytob,
     model.components = model.components,
     model.priors = model.priors,
     chromosome.scope = "cytoband"
