@@ -5,6 +5,7 @@
 #' Cell-chromosome values are then discretized into integers by conventional rounding (1.5 <= x < 2.5 rounds to 2).
 #' Smoothed copy number and discretized smoothed copy number values are stored as `smoothedCopyNumber` and `discreteCopyNumber` assays,
 #' in `altExp` slots `smoothedCopyNumberByChr` for chromosome-level smoothing, and `smoothedCopyNumberByArm` for chromosome arm-level smoothing.
+#'
 #' @param TapestriExperiment `TapestriExperiment` object.
 #' @param method Character, smoothing method: median (default) or mean.
 #'
