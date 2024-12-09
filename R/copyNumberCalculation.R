@@ -239,11 +239,13 @@ calcSmoothCopyNumber <- function(TapestriExperiment,
   smoothed.ploidy.arm <- smoothed.ploidy.arm[, colnames(ploidy.counts)]
   
   smoothed.ploidy.cytob <- ploidy.tidy %>%
-    dplyr::group_by(.data$cell.barcode, .data$cytoband) %>%
+    dplyr::group_by(.data$cell.barcode, .data$cytoband, .data$arm) %>%
     dplyr::summarize(
       smooth.ploidy = smooth.func(.data$ploidy),
       .groups = "drop"
-    ) %>%
+    ) 
+  smoothed.ploidy.cytob$cytoband <- paste0(smoothed.ploidy.cytob$arm, smoothed.ploidy.cytob$cytoband)
+  smoothed.ploidy.cytob <- smoothed.ploidy.cytob %>%
     tidyr::pivot_wider(
       id_cols = dplyr::all_of("cytoband"),
       values_from = dplyr::all_of("smooth.ploidy"),
