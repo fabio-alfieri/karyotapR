@@ -27,7 +27,7 @@ generateControlCopyNumberTemplate <- function(TapestriExperiment,
     copy.number = copy.number,
     sample.label = sample.feature.label
   )
-  rownames(ploidy.template) <- ploidy.template$cytoband
+  # rownames(ploidy.template) <- ploidy.template$cytoband
   
   ploidy.template$arm <- as.data.frame(do.call(rbind, str_split(ploidy.template$cytoband, '_')))[,1]
   ploidy.template$cytoband <- as.data.frame(do.call(rbind, str_split(ploidy.template$cytoband, '_')))[,2]
@@ -100,7 +100,7 @@ calcCopyNumber <- function(TapestriExperiment,
   
   # get median normalized counts for each probe based on control.copy.number
   probe.table <- as.data.frame(SummarizedExperiment::rowData(TapestriExperiment))[, c("probe.id", "chr", "cytoband")]
-  probe.table$cytoband <- paste0(probe.table$chr,probe.table$cytoband)
+  probe.table$cytoband <- paste0('chr',probe.table$chr,probe.table$cytoband)
   probe.table$chr <- NULL
   probe.table <- merge(probe.table, control.copy.number, by = "cytoband", all.x = TRUE, sort = FALSE)
   rownames(probe.table) <- probe.table$probe.id
