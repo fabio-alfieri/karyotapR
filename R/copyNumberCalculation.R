@@ -22,12 +22,14 @@ generateControlCopyNumberTemplate <- function(TapestriExperiment,
   }
   
   ploidy.template <- data.frame(
-    cytoband = unique(paste0(SummarizedExperiment::rowData(TapestriExperiment)$chr,
+    cytoband = unique(paste0(SummarizedExperiment::rowData(TapestriExperiment)$chr,'_',a
                              SummarizedExperiment::rowData(TapestriExperiment)$cytoband)),
     copy.number = copy.number,
     sample.label = sample.feature.label
   )
   rownames(ploidy.template) <- ploidy.template$cytoband
+
+  ploidy.template$chr <- 
   
   return(ploidy.template)
 }
