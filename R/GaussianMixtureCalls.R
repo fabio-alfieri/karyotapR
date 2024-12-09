@@ -143,7 +143,7 @@ calcGMMCopyNumber <- function(TapestriExperiment,
   SummarizedExperiment::assay(altExp(TapestriExperiment, "smoothedCopyNumberByArm"), "gmmCopyNumber") <- class.labels.arm.df
 
   # cytobands
-  cli::cli_bullets(c("v" = "Saving chromosome arm copy number calls to altExp: smoothedCopyNumberByArm, assay: gmmCopyNumber..."))
+  cli::cli_bullets(c("v" = "Saving chromosome arm copy number calls to altExp: smoothedCopyNumberByCytob, assay: gmmCopyNumber..."))
 
   class.labels.cytob.df <- cn.model.table.cytob %>%
     dplyr::pull("cn.class") %>%
@@ -155,7 +155,7 @@ calcGMMCopyNumber <- function(TapestriExperiment,
     as.data.frame() %>%
     magrittr::set_rownames(cn.model.table.cytob$feature.id)
 
-  SummarizedExperiment::assay(altExp(TapestriExperiment, "smoothedCopyNumberByArm"), "gmmCopyNumber") <- class.labels.cytob.df
+  SummarizedExperiment::assay(altExp(TapestriExperiment, "smoothedCopyNumberByCytob"), "gmmCopyNumber") <- class.labels.cytob.df
 
   TapestriExperiment@gmmParams <- list("chr" = cn.model.table.chr, "arm" = cn.model.table.arm, "cytoband" = cn.model.table.cytob)
   cli::cli_bullets(c("v" = "Saving GMM models and metadata to {.var gmmParams} slot..."))
