@@ -29,8 +29,8 @@ generateControlCopyNumberTemplate <- function(TapestriExperiment,
   )
   rownames(ploidy.template) <- ploidy.template$cytoband
   
-  ploidy.template$arm <- do.call(rbind, str_split(control.copy.number$cytoband, '_'))[,1]
-  ploidy.template$cytoband <- do.call(rbind, str_split(control.copy.number$cytoband, '_'))[,2]
+  ploidy.template$arm <- as.data.frame(do.call(rbind, str_split(control.copy.number$cytoband, '_')))[,1]
+  ploidy.template$cytoband <- as.data.frame(do.call(rbind, str_split(control.copy.number$cytoband, '_')))[,2]
   #ploidy.template$cytoband <- paste0(control.copy.number$arm, control.copy.number$cytoband)
 
   return(ploidy.template)
