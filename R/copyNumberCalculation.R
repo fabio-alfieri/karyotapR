@@ -343,10 +343,10 @@ calcSmoothCopyNumber <- function(TapestriExperiment, method = "median", control.
 
       # cytobands
       smoothed.ploidy.cytob <- ploidy.tidy %>% 
-          dplyr::group_split(.data$cytobands, .data$cell.barcode, .keep = TRUE) %>% 
+          dplyr::group_split(.data$cytoband, .data$cell.barcode, .keep = TRUE) %>% 
           lapply(function(x){
               result <- round(matrixStats::weightedMedian(x = x$ploidy, w = x$probe.weight), 3)
-              return(list(x$cell.barcode[1], x$cytobands[1], result))
+              return(list(x$cell.barcode[1], x$cytoband[1], result))
           }) %>% 
           purrr::list_transpose()
       
