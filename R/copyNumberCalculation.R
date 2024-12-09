@@ -19,7 +19,7 @@ generateControlCopyNumberTemplate <- function(TapestriExperiment,
                                               sample.feature.label = NA) {
   if (any(is.na(unique(SummarizedExperiment::rowData(TapestriExperiment)$arm)))) {
     cli::cli_abort("Non-genomic probe found in rowData(<TapestriExperiment>)$arm column. Please remove before calculating copy number.")
-  }
+  } 
   
   ploidy.template <- data.frame(
     cytoband = unique(paste0(SummarizedExperiment::rowData(TapestriExperiment)$chr,'_',
