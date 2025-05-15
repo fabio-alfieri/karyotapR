@@ -41,7 +41,7 @@ runPCA <- function(TapestriExperiment,
       }
     }
   }
-
+ 
   pca.assay <- getTidyData(TapestriExperiment,
     alt.exp = alt.exp,
     assay = assay,
