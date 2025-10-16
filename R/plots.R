@@ -178,7 +178,9 @@ assayBoxPlot <- function(TapestriExperiment, alt.exp = NULL, assay = NULL, log.y
 #'   assay = "counts", split.row.by = "test.cluster",
 #'   annotate.row.by = "test.cluster", split.col.by = "chr"
 #' )
-assayHeatmap <- function(TapestriExperiment, alt.exp = NULL, assay = NULL, split.col.by = NULL, split.row.by = NULL, annotate.row.by = NULL, color.preset = NULL, color.custom = NULL, ...) {
+assayHeatmap <- function(TapestriExperiment, alt.exp = NULL, assay = NULL, 
+                         split.col.by = NULL, split.row.by = NULL, annotate.row.by = NULL, 
+                         color.preset = NULL, color.custom = NULL, chromosome.cluster = NULL, ...) {
   assay <- .SelectAssay(TapestriExperiment, alt.exp, assay)
 
   tidy.data <- getTidyData(TapestriExperiment, alt.exp, assay)
@@ -249,10 +251,16 @@ assayHeatmap <- function(TapestriExperiment, alt.exp = NULL, assay = NULL, split
       c(0, 1, 1.5, 2, 2.5, 3, 4, 8),
       c("#2c7bb6", "#abd9e9", "#ffffff", "#ffffff", "#ffffff", "#fdae61", "#d7191c", "black")
     )
+  } else if (color.preset == "copy.number.4") {
+    hm.col <- circlize::colorRamp2(
+      c(0, 1, 2, 3, 4),
+      c("#2c7bb6", "#abd9e9", "#ffffff", "#fdae61", "#d7191c")
+    )
   } else {
     hm.col <- color.custom
   }
 
+  
   # set default params here to allow overwriting in function call
   hm.defaults <- list(
     "name" = assay,
@@ -262,12 +270,31 @@ assayHeatmap <- function(TapestriExperiment, alt.exp = NULL, assay = NULL, split
     "show.column.names" = show.column.names,
     "column.split" = column.split
   )
-
-  hm <- .ComplexHeatmap.default(
-    matrix = t(hm.matrix),
-    hm.defaults = hm.defaults,
-    ...
-  )
+  
+  if (is.null(cluster.chromosome)){
+    
+    hm <- .ComplexHeatmap.default(
+      matrix = t(hm.matrix),
+      hm.defaults = hm.defaults,
+      cluster_rows = TRUE,
+      ...
+    )
+    
+  } else {
+    
+    row.order <- hm.matrix[which(rownames(hm.matrix) %in% cluster.chromosome),]
+    row.order <- row.order[,hclust(dist(t(row.order)))$order]
+    row.order <- colnames(row.order)
+    
+    hm <- .ComplexHeatmap.default(
+      matrix = t(hm.matrix),
+      hm.defaults = hm.defaults,
+      row_order = row.order,
+      cluster_rows = FALSE,
+      ...
+    )
+    
+  }
 
   return(hm)
 }
