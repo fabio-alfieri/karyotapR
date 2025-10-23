@@ -271,7 +271,7 @@ assayHeatmap <- function(TapestriExperiment, alt.exp = NULL, assay = NULL,
     "column.split" = column.split
   )
   
-  if (is.null(cluster.chromosome)){
+  if (is.null(chromosome.cluster)){
     
     hm <- .ComplexHeatmap.default(
       matrix = t(hm.matrix),
@@ -282,7 +282,7 @@ assayHeatmap <- function(TapestriExperiment, alt.exp = NULL, assay = NULL,
     
   } else {
     
-    row.order <- hm.matrix[which(rownames(hm.matrix) %in% cluster.chromosome),]
+    row.order <- hm.matrix[which(rownames(hm.matrix) %in% chromosome.cluster),]
     row.order <- row.order[,hclust(dist(t(row.order)))$order]
     row.order <- colnames(row.order)
     
