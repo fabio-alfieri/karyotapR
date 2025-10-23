@@ -23,7 +23,7 @@
 #' tap.object <- newTapestriExperimentExample() # example TapestriExperiment object
 #' tap.object <- calcNormCounts(tap.object)
 calcNormCounts <- function(TapestriExperiment,
-                           method = "mb",
+                           method = "kt",
                            scaling.factor = NULL) {
   method <- tolower(method)
 
@@ -33,7 +33,9 @@ calcNormCounts <- function(TapestriExperiment,
     warning("NAs found in count data. normcounts may also contain NAs.")
   }
 
-  if (method == "mb") {
+  if (method == "kt") {
+    read.counts.normal <- .ktNormCounts(raw.count.matrix)
+  } else if (method == "mb") {
     read.counts.normal <- .MBNormCounts(raw.count.matrix)
   } else if (method == "libnorm") {
     read.counts.normal <- .LibSizeNorm(raw.count.matrix,
@@ -55,6 +57,14 @@ calcNormCounts <- function(TapestriExperiment,
   SummarizedExperiment::rowData(TapestriExperiment)$norm.count.sd <- new.probe.data
 
   return(TapestriExperiment)
+}
+
+.ktNormCounts <- function(input.matrix){
+  input.matrix <- apply(input.matrix, 2, function(x)(x+1)/sum(x)) * 1000
+  input.matrix <- apply(input.matrix, 1, function(x)(x+1)/sum(x)) * 1000
+  input.matrix <- t(input.matrix)
+  
+  return(input.matrix)
 }
 
 .MBNormCounts <- function(input.matrix) {
