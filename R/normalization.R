@@ -24,9 +24,20 @@
 #' tap.object <- calcNormCounts(tap.object)
 calcNormCounts <- function(TapestriExperiment,
                            method = "kt",
-                           scaling.factor = NULL) {
+                           scaling.factor = 1000,
+                           filter.bc = TRUE,
+                           limits.filter.bc = c(0.5,2.5)) {
   method <- tolower(method)
 
+  if(filter.bc){
+    upper_limit <- median(TapestriExperiment$total.reads)+limits.filter.bc[2]*sd(TapestriExperiment$total.reads)
+    lower_limit <- median(TapestriExperiment$total.reads)-limits.filter.bc[1]*sd(TapestriExperiment$total.reads)
+    cell.bc <- colData(TapestriExperiment) %>% as_tibble() %>% 
+      filter(total.reads <= upper_limit & total.reads >= lower_limit) %>% select(cell.barcode)
+    
+    TapestriExperiment <- TapestriExperiment[, colData(TapestriExperiment)$cell.barcode %in% cell.bc$cell.barcode]
+  }
+  
   raw.count.matrix <- SummarizedExperiment::assay(TapestriExperiment, "counts")
 
   if (any(is.na(raw.count.matrix))) {
@@ -34,7 +45,9 @@ calcNormCounts <- function(TapestriExperiment,
   }
 
   if (method == "kt") {
-    read.counts.normal <- .ktNormCounts(raw.count.matrix)
+    read.counts.normal <- .ktNormCounts(raw.count.matrix, scaling.factor)
+  } else if (method == "kt2") {
+    read.counts.normal <- .kt2NormCounts(raw.count.matrix)
   } else if (method == "mb") {
     read.counts.normal <- .MBNormCounts(raw.count.matrix)
   } else if (method == "libnorm") {
@@ -59,12 +72,25 @@ calcNormCounts <- function(TapestriExperiment,
   return(TapestriExperiment)
 }
 
-.ktNormCounts <- function(input.matrix){
-  input.matrix <- apply(input.matrix, 2, function(x)(x+1)/sum(x)) * 1000
-  input.matrix <- apply(input.matrix, 1, function(x)(x+1)/sum(x)) * 1000
-  input.matrix <- t(input.matrix)
+.ktNormCounts <- function(input.matrix, scaling.factor){
+  # lib size normalization 
+  input.matrix <- apply(input.matrix, 2, function(x)(x)/sum(x)) * scaling.factor
+  # probe normalization
+  matrix.normal <- apply(input.matrix, 1, function(x)(x+1)/sum(x)) * scaling.factor
+  matrix.normal <- t(matrix.normal)
+
+  return(matrix.normal)
+}
+
+.kt2NormCounts <- function(input.matrix){
+  # lib size normalization 
+  input.matrix <- apply(input.matrix, 2, function(x)(x)/sum(x)) 
+  input.matrix <- input.matrix * (1/median(input.matrix[input.matrix != 0])) # estimate scaling.factor
+  # probe normalization
+  matrix.normal <- apply(input.matrix, 1, function(x)(x+1)/median(x))
+  matrix.normal <- t(matrix.normal)
   
-  return(input.matrix)
+  return(matrix.normal)
 }
 
 .MBNormCounts <- function(input.matrix) {
