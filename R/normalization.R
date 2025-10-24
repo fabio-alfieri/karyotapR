@@ -28,7 +28,7 @@ calcNormCounts <- function(TapestriExperiment,
                            filter.bc = TRUE,
                            limits.filter.bc = c(0.5,2.5)) {
   method <- tolower(method)
-
+  
   if(filter.bc){
     upper_limit <- median(TapestriExperiment$total.reads)+limits.filter.bc[2]*sd(TapestriExperiment$total.reads)
     lower_limit <- median(TapestriExperiment$total.reads)-limits.filter.bc[1]*sd(TapestriExperiment$total.reads)
@@ -39,11 +39,11 @@ calcNormCounts <- function(TapestriExperiment,
   }
   
   raw.count.matrix <- SummarizedExperiment::assay(TapestriExperiment, "counts")
-
+  
   if (any(is.na(raw.count.matrix))) {
     warning("NAs found in count data. normcounts may also contain NAs.")
   }
-
+  
   if (method == "kt") {
     read.counts.normal <- .ktNormCounts(raw.count.matrix, scaling.factor)
   } else if (method == "kt2") {
@@ -57,10 +57,10 @@ calcNormCounts <- function(TapestriExperiment,
   } else {
     warning("Method not recognized. Set method to 'mb' or libNorm'")
   }
-
+  
   # add to normalized counts slot
   normcounts(TapestriExperiment) <- read.counts.normal
-
+  
   # calculate norm count SD for each amplicon and add to rowData
   current.probe.data <- SummarizedExperiment::rowData(TapestriExperiment)
   current.probe.order <- rownames(current.probe.data)
@@ -68,7 +68,7 @@ calcNormCounts <- function(TapestriExperiment,
   names(new.probe.data) <- rownames(read.counts.normal)
   new.probe.data <- new.probe.data[current.probe.order]
   SummarizedExperiment::rowData(TapestriExperiment)$norm.count.sd <- new.probe.data
-
+  
   return(TapestriExperiment)
 }
 
