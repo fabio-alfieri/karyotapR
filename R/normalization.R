@@ -16,7 +16,7 @@
 #' @export
 #'
 #' @concept copy number
-#'
+
 #' @importFrom stats median sd
 #'
 #' @examples
@@ -26,7 +26,8 @@ calcNormCounts <- function(TapestriExperiment,
                            method = "kt",
                            scaling.factor = 1000,
                            filter.bc = TRUE,
-                           limits.filter.bc = c(0.5,2.5)) {
+                           limits.filter.bc = c(0.5,2.5),
+                           sensitivity = 0.5) {
   method <- tolower(method)
   
   if(filter.bc){
@@ -39,15 +40,15 @@ calcNormCounts <- function(TapestriExperiment,
   }
   
   raw.count.matrix <- SummarizedExperiment::assay(TapestriExperiment, "counts")
-  
+
   if (any(is.na(raw.count.matrix))) {
     warning("NAs found in count data. normcounts may also contain NAs.")
   }
-  
+
   if (method == "kt") {
-    read.counts.normal <- .ktNormCounts(raw.count.matrix, scaling.factor)
+    read.counts.normal <- .ktNormCounts(raw.count.matrix, scaling.factor, sensitivity)
   } else if (method == "kt2") {
-    read.counts.normal <- .kt2NormCounts(raw.count.matrix)
+    read.counts.normal <- .kt2NormCounts(raw.count.matrix, sensitivity)
   } else if (method == "mb") {
     read.counts.normal <- .MBNormCounts(raw.count.matrix)
   } else if (method == "libnorm") {
@@ -57,10 +58,10 @@ calcNormCounts <- function(TapestriExperiment,
   } else {
     warning("Method not recognized. Set method to 'mb' or libNorm'")
   }
-  
+
   # add to normalized counts slot
   normcounts(TapestriExperiment) <- read.counts.normal
-  
+
   # calculate norm count SD for each amplicon and add to rowData
   current.probe.data <- SummarizedExperiment::rowData(TapestriExperiment)
   current.probe.order <- rownames(current.probe.data)
@@ -68,30 +69,80 @@ calcNormCounts <- function(TapestriExperiment,
   names(new.probe.data) <- rownames(read.counts.normal)
   new.probe.data <- new.probe.data[current.probe.order]
   SummarizedExperiment::rowData(TapestriExperiment)$norm.count.sd <- new.probe.data
-  
+
   return(TapestriExperiment)
 }
 
-.ktNormCounts <- function(input.matrix, scaling.factor){
-  # lib size normalization 
-  input.matrix <- apply(input.matrix, 2, function(x)(x)/sum(x)) * scaling.factor
-  # probe normalization
-  matrix.normal <- apply(input.matrix, 1, function(x)(x+1)/sum(x)) * scaling.factor
-  matrix.normal <- t(matrix.normal)
+# .ktNormCounts <- function(input.matrix, scaling.factor){
+#   # lib size normalization 
+#   input.matrix <- apply(input.matrix, 2, function(x)(x)/sum(x)) * scaling.factor
+#   # probe normalization
+#   matrix.normal <- apply(input.matrix, 1, function(x)(x+0.1)/sum(x)) * scaling.factor
+#   matrix.normal <- t(matrix.normal)
+# 
+#   return(matrix.normal)
+# }
 
-  return(matrix.normal)
-}
-
-.kt2NormCounts <- function(input.matrix){
+.ktNormCounts <- function(input.matrix, sensitivity = 0.5){
   # lib size normalization 
   input.matrix <- apply(input.matrix, 2, function(x)(x)/sum(x)) 
   input.matrix <- input.matrix * (1/median(input.matrix[input.matrix != 0])) # estimate scaling.factor
   # probe normalization
-  matrix.normal <- apply(input.matrix, 1, function(x)(x+1)/median(x))
-  matrix.normal <- t(matrix.normal)
+  c_vec <- apply(input.matrix, 1, function(x) sd(x)/median(x))*sensitivity
+  c_vec <- pmin(pmax(c_vec, 0.1), 1.0)
+  # print(c_vec)
+  # matrix.normal <- apply(input.matrix, 1, function(x)(x+0.5*median(x))/median(x))
+  matrix.normal <- t(
+    sapply(seq_len(nrow(input.matrix)), function(i) {
+      x <- input.matrix[i, ]
+      (x + c_vec[i] * median(x)) / median(x)
+    })
+  )
+  rownames(matrix.normal) <- rownames(input.matrix)
+  colnames(matrix.normal) <- colnames(input.matrix)
   
   return(matrix.normal)
 }
+
+.kt2NormCounts <- function(input.matrix, sensitivity){
+  # get "good barcodes", barcodes that have at least 10% the counts of the 11th barcode ranked for highest number of counts
+  barcode.sums <- apply(input.matrix, MARGIN = 2, sum)
+  barcode.sorted <- sort(barcode.sums, decreasing = TRUE)
+  good.barcodes <- barcode.sums > (barcode.sorted[11] / 10)
+  print(good.barcodes)
+  
+  # normalize barcodes relative to barcode sums (lib size normalization)
+  input.matrix <- apply(input.matrix, 2, function(x)(x)/sum(x)) 
+  matrix.normal <- input.matrix * (1/median(input.matrix[input.matrix != 0])) # estimate scaling.factor
+  
+  # normalize probes relative to probe median. medians calculated using "good barcodes"
+  c_vec <- apply(matrix.normal[, good.barcodes], 1, function(x) sd(x)/median(x))*sensitivity
+  c_vec <- pmin(pmax(c_vec, 0.1), 1.0)
+  # print(c_vec)
+  # matrix.normal <- apply(input.matrix, 1, function(x)(x+0.5*median(x))/median(x))
+  matrix.normal <- t(
+    sapply(seq_len(nrow(matrix.normal)), function(i) {
+      x <- input.matrix[i, ]
+      (x + c_vec[i] * median(x)) / median(x)
+    })
+  )
+  
+  rownames(matrix.normal) <- rownames(input.matrix)
+  colnames(matrix.normal) <- colnames(input.matrix)
+  
+  return(matrix.normal)
+}
+
+# .kt2NormCounts <- function(input.matrix){
+#   # lib size normalization 
+#   input.matrix <- apply(input.matrix, 2, function(x)(x)/sum(x)) 
+#   input.matrix <- input.matrix * (1/median(input.matrix[input.matrix != 0])) # estimate scaling.factor
+#   # probe normalization
+#   matrix.normal <- apply(input.matrix, 1, function(x)(x+0.5)/median(x))
+#   matrix.normal <- t(matrix.normal)
+#   
+#   return(matrix.normal)
+# }
 
 .MBNormCounts <- function(input.matrix) {
   # get "good barcodes", barcodes that have at least 10% the counts of the 11th barcode ranked for highest number of counts
