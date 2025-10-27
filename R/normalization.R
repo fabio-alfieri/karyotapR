@@ -46,7 +46,7 @@ calcNormCounts <- function(TapestriExperiment,
   }
 
   if (method == "kt") {
-    read.counts.normal <- .ktNormCounts(raw.count.matrix, scaling.factor, sensitivity)
+    read.counts.normal <- .ktNormCounts(raw.count.matrix, sensitivity)
   } else if (method == "kt2") {
     read.counts.normal <- .kt2NormCounts(raw.count.matrix, sensitivity)
   } else if (method == "mb") {
@@ -83,7 +83,7 @@ calcNormCounts <- function(TapestriExperiment,
 #   return(matrix.normal)
 # }
 
-.ktNormCounts <- function(input.matrix, sensitivity = 0.5){
+.ktNormCounts <- function(input.matrix, sensitivity){
   # lib size normalization 
   input.matrix <- apply(input.matrix, 2, function(x)(x)/sum(x)) 
   input.matrix <- input.matrix * (1/median(input.matrix[input.matrix != 0])) # estimate scaling.factor
