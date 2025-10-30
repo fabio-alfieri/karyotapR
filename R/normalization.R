@@ -105,28 +105,20 @@ calcNormCounts <- function(TapestriExperiment,
 }
 
 .kt2NormCounts <- function(input.matrix, sensitivity){
-  # get "good barcodes", barcodes that have at least 10% the counts of the 11th barcode ranked for highest number of counts
-  barcode.sums <- apply(input.matrix, MARGIN = 2, sum)
-  barcode.sorted <- sort(barcode.sums, decreasing = TRUE)
-  good.barcodes <- barcode.sums > (barcode.sorted[11] / 10)
-  print(good.barcodes)
-  
-  # normalize barcodes relative to barcode sums (lib size normalization)
+  # lib size normalization 
   input.matrix <- apply(input.matrix, 2, function(x)(x)/sum(x)) 
-  matrix.normal <- input.matrix * (1/median(input.matrix[input.matrix != 0])) # estimate scaling.factor
-  
-  # normalize probes relative to probe median. medians calculated using "good barcodes"
-  c_vec <- apply(matrix.normal[, good.barcodes], 1, function(x) sd(x)/median(x))*sensitivity
+  input.matrix <- input.matrix * (1/median(input.matrix[input.matrix != 0])) # estimate scaling.factor
+  # probe normalization
+  c_vec <- apply(input.matrix, 1, function(x) mad(x)/median(x))*sensitivity
   c_vec <- pmin(pmax(c_vec, 0.1), 1.0)
   # print(c_vec)
   # matrix.normal <- apply(input.matrix, 1, function(x)(x+0.5*median(x))/median(x))
   matrix.normal <- t(
-    sapply(seq_len(nrow(matrix.normal)), function(i) {
+    sapply(seq_len(nrow(input.matrix)), function(i) {
       x <- input.matrix[i, ]
       (x + c_vec[i] * median(x)) / median(x)
     })
   )
-  
   rownames(matrix.normal) <- rownames(input.matrix)
   colnames(matrix.normal) <- colnames(input.matrix)
   
