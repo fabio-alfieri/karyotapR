@@ -47,8 +47,6 @@ calcNormCounts <- function(TapestriExperiment,
 
   if (method == "kt") {
     read.counts.normal <- .ktNormCounts(raw.count.matrix, sensitivity)
-  } else if (method == "kt2") {
-    read.counts.normal <- .kt2NormCounts(raw.count.matrix, sensitivity)
   } else if (method == "mb") {
     read.counts.normal <- .MBNormCounts(raw.count.matrix)
   } else if (method == "libnorm") {
@@ -73,16 +71,6 @@ calcNormCounts <- function(TapestriExperiment,
   return(TapestriExperiment)
 }
 
-# .ktNormCounts <- function(input.matrix, scaling.factor){
-#   # lib size normalization 
-#   input.matrix <- apply(input.matrix, 2, function(x)(x)/sum(x)) * scaling.factor
-#   # probe normalization
-#   matrix.normal <- apply(input.matrix, 1, function(x)(x+0.1)/sum(x)) * scaling.factor
-#   matrix.normal <- t(matrix.normal)
-# 
-#   return(matrix.normal)
-# }
-
 .ktNormCounts <- function(input.matrix, sensitivity){
   # lib size normalization 
   input.matrix <- apply(input.matrix, 2, function(x)(x)/sum(x)) 
@@ -103,38 +91,6 @@ calcNormCounts <- function(TapestriExperiment,
   
   return(matrix.normal)
 }
-
-.kt2NormCounts <- function(input.matrix, sensitivity){
-  # lib size normalization 
-  input.matrix <- apply(input.matrix, 2, function(x)(x)/sum(x)) 
-  input.matrix <- input.matrix * (1/median(input.matrix[input.matrix != 0])) # estimate scaling.factor
-  # probe normalization
-  c_vec <- apply(input.matrix, 1, function(x) mad(x)/median(x))*sensitivity
-  c_vec <- pmin(pmax(c_vec, 0.1), 1.0)
-  # print(c_vec)
-  # matrix.normal <- apply(input.matrix, 1, function(x)(x+0.5*median(x))/median(x))
-  matrix.normal <- t(
-    sapply(seq_len(nrow(input.matrix)), function(i) {
-      x <- input.matrix[i, ]
-      (x + c_vec[i] * median(x)) / median(x)
-    })
-  )
-  rownames(matrix.normal) <- rownames(input.matrix)
-  colnames(matrix.normal) <- colnames(input.matrix)
-  
-  return(matrix.normal)
-}
-
-# .kt2NormCounts <- function(input.matrix){
-#   # lib size normalization 
-#   input.matrix <- apply(input.matrix, 2, function(x)(x)/sum(x)) 
-#   input.matrix <- input.matrix * (1/median(input.matrix[input.matrix != 0])) # estimate scaling.factor
-#   # probe normalization
-#   matrix.normal <- apply(input.matrix, 1, function(x)(x+0.5)/median(x))
-#   matrix.normal <- t(matrix.normal)
-#   
-#   return(matrix.normal)
-# }
 
 .MBNormCounts <- function(input.matrix) {
   # get "good barcodes", barcodes that have at least 10% the counts of the 11th barcode ranked for highest number of counts
