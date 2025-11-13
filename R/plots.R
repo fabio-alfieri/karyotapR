@@ -184,7 +184,14 @@ assayHeatmap <- function(TapestriExperiment, alt.exp = NULL, assay = NULL,
   assay <- .SelectAssay(TapestriExperiment, alt.exp, assay)
 
   tidy.data <- getTidyData(TapestriExperiment, alt.exp, assay)
-
+  
+  .order_arms <- c("chr1p","chr1q","chr2p","chr2q","chr3p","chr3q","chr4p","chr4q","chr5p",
+                   "chr5q","chr6p","chr6q","chr7p","chr7q","chr8p","chr8q","chr9p","chr9q",
+                   "chr10p","chr10q","chr11p","chr11q","chr12p","chr12q","chr13q","chr14q",
+                   "chr15q","chr16p","chr16q","chr17p","chr17q","chr18p","chr18q","chr19p",
+                   "chr19q","chr20p","chr20q","chr21q","chr22q","chrXp","chrXq")
+  tidy.data$feature.id <- factor(tidy.data$feature.id, levels = .order_arms)
+  
   hm.matrix <- tidy.data %>%
     dplyr::select("feature.id", "cell.barcode", {{ assay }}) %>%
     tidyr::pivot_wider(
@@ -194,6 +201,7 @@ assayHeatmap <- function(TapestriExperiment, alt.exp = NULL, assay = NULL,
     ) %>%
     tibble::column_to_rownames("feature.id")
 
+  
   if (is.null(split.col.by)) {
     show.column.names <- TRUE
     column.split <- NULL
