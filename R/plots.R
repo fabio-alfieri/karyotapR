@@ -191,6 +191,7 @@ assayHeatmap <- function(TapestriExperiment, alt.exp = NULL, assay = NULL,
                    "chr15q","chr16p","chr16q","chr17p","chr17q","chr18p","chr18q","chr19p",
                    "chr19q","chr20p","chr20q","chr21q","chr22q","chrXp","chrXq")
   tidy.data$feature.id <- factor(tidy.data$feature.id, levels = .order_arms)
+  tidy.data <- tidy.data[order(tidy.data$feature.id),]
   
   hm.matrix <- tidy.data %>%
     dplyr::select("feature.id", "cell.barcode", {{ assay }}) %>%
@@ -201,7 +202,6 @@ assayHeatmap <- function(TapestriExperiment, alt.exp = NULL, assay = NULL,
     ) %>%
     tibble::column_to_rownames("feature.id")
 
-  
   if (is.null(split.col.by)) {
     show.column.names <- TRUE
     column.split <- NULL
