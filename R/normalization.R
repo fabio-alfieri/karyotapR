@@ -78,7 +78,6 @@ calcNormCounts <- function(TapestriExperiment,
   # probe normalization
   c_vec <- apply(input.matrix, 1, function(x) sd(x)/median(x))*sensitivity
   # c_vec <- pmin(pmax(c_vec, 0.1), 1.0)
-  print(c_vec)
   # matrix.normal <- apply(input.matrix, 1, function(x)(x+0.5*median(x))/median(x))
   matrix.normal <- t(
     sapply(seq_len(nrow(input.matrix)), function(i) {
