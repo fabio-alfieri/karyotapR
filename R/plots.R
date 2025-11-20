@@ -266,6 +266,11 @@ assayHeatmap <- function(TapestriExperiment, alt.exp = NULL, assay = NULL,
       c(0, 1, 2, 3, 4),
       c("#2c7bb6", "#abd9e9", "#ffffff", "#fdae61", "#d7191c")
     )
+  } else if (color.preset == "copy.number.3") {
+    hm.col <- circlize::colorRamp2(
+      c(0, 1, 2, 3),
+      c("#2c7bb6", "#2c7bb6", "#ffffff", "#d7191c")
+    )
   } else {
     hm.col <- color.custom
   }
