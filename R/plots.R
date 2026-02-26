@@ -304,7 +304,7 @@ assayHeatmap <- function(TapestriExperiment, alt.exp = NULL, assay = NULL,
     row.order$cell.barcode <- rownames(row.order)
     row.order <- row.order[hclust(dist(row.order[,1]))$order,]
     row.order <- rownames(row.order)
-    if(!is.na(row.order.input)){
+    if(!is.null(row.order.input)){
       row.order <- row.order.input
     }
     hm <- .ComplexHeatmap.default(
