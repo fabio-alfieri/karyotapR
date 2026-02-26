@@ -299,7 +299,7 @@ assayHeatmap <- function(TapestriExperiment, alt.exp = NULL, assay = NULL,
     
     row.order <- t(hm.matrix[which(rownames(hm.matrix) %in% 
                                      chromosome.cluster), ])
-    row.order <- as.data.frame(apply(row.order, 1, mean))
+    row.order <- as.data.frame(apply(row.order, 1, sum))
     row.order$cell.barcode <- rownames(row.order)
     row.order <- row.order[hclust(dist(row.order[,1]))$order,]
     row.order <- rownames(row.order)
