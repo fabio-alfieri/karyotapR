@@ -298,6 +298,7 @@ assayHeatmap <- function(TapestriExperiment, alt.exp = NULL, assay = NULL,
   } else {
     
     row.order <- hm.matrix[which(rownames(hm.matrix) %in% chromosome.cluster),]
+    row.order <- t(as.data.frame(apply(row.order, 2, mean)))
     row.order <- row.order[,hclust(dist(t(row.order)))$order]
     row.order <- colnames(row.order)
     
