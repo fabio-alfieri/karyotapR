@@ -180,7 +180,8 @@ assayBoxPlot <- function(TapestriExperiment, alt.exp = NULL, assay = NULL, log.y
 #' )
 assayHeatmap <- function(TapestriExperiment, alt.exp = NULL, assay = NULL, 
                          split.col.by = NULL, split.row.by = NULL, annotate.row.by = NULL, 
-                         color.preset = NULL, color.custom = NULL, chromosome.cluster = NULL, ...) {
+                         color.preset = NULL, color.custom = NULL, chromosome.cluster = NULL, 
+                         row.order.input = NULL, ...) {
   assay <- .SelectAssay(TapestriExperiment, alt.exp, assay)
 
   tidy.data <- getTidyData(TapestriExperiment, alt.exp, assay)
@@ -303,6 +304,9 @@ assayHeatmap <- function(TapestriExperiment, alt.exp = NULL, assay = NULL,
     row.order$cell.barcode <- rownames(row.order)
     row.order <- row.order[hclust(dist(row.order[,1]))$order,]
     row.order <- rownames(row.order)
+    if(!is.na(row.order.input)){
+      row.order <- row.order.input
+    }
     hm <- .ComplexHeatmap.default(
       matrix = t(hm.matrix),
       hm.defaults = hm.defaults,
@@ -313,7 +317,7 @@ assayHeatmap <- function(TapestriExperiment, alt.exp = NULL, assay = NULL,
     
   }
 
-  return(hm)
+  return(list(hm, row.order))
 }
 
 # Internal ComplexHeatmap call with reasonable default settings
