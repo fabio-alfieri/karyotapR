@@ -296,6 +296,8 @@ assayHeatmap <- function(TapestriExperiment, alt.exp = NULL, assay = NULL,
       ...
     )
     
+    return(hm)
+    
   } else {
     
     row.order <- t(hm.matrix[which(rownames(hm.matrix) %in% 
@@ -317,9 +319,9 @@ assayHeatmap <- function(TapestriExperiment, alt.exp = NULL, assay = NULL,
       ...
     )
     
+    return(list(hm, row.order))
   }
 
-  return(list(hm, row.order))
 }
 
 # Internal ComplexHeatmap call with reasonable default settings
