@@ -480,5 +480,5 @@ plotCopyNumberGMM <- function(TapestriExperiment,
     model.plot <- model.plot + geom_vline(xintercept = model.boundaries, linetype = "dashed")
   }
 
-  return(model.plot)
+  return(list(model.plot,model.fit))
 }
