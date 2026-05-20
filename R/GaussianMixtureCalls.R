@@ -47,7 +47,7 @@ calcGMMCopyNumber <- function(TapestriExperiment,
     cli::cli_abort("{.arg control.copy.number} has not been set. Use {.fun karyotapR::generateControlCopyNumberTemplate}.")
   }
 
-  if (length(cell.barcodes) == 0 | !is.null(filtered.tapestri.exp)) {
+  if (length(cell.barcodes) == 0 & !is.null(filtered.tapestri.exp)) {
     cli::cli_abort("cell.barcodes is empty. \n ATTENTION: In-silico reference is applied!")
     filtered.tapestri.exp <- filtered.tapestri.exp
   } else {
