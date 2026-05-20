@@ -76,8 +76,6 @@ calcGMMCopyNumber <- function(TapestriExperiment,
   cn.model.params.chr <- .fitGaussianDistributions(simulated.tapestri.experiment = simulated.tapestri.experiment, chromosome.scope = "chr")
   cn.model.params.arm <- .fitGaussianDistributions(simulated.tapestri.experiment = simulated.tapestri.experiment, chromosome.scope = "arm")
 
-  TapestriExperiment@gmmParams$chr$simulated.cn.model.params <- cn.model.params.chr
-  TapestriExperiment@gmmParams$arm$simulated.cn.model.params <- cn.model.params.arm
   
   # calculate posterior probabilities for each data point under each model component
   cli::cli_progress_step("Calculating posterior probabilities...")
@@ -136,6 +134,10 @@ calcGMMCopyNumber <- function(TapestriExperiment,
   SummarizedExperiment::assay(altExp(TapestriExperiment, "smoothedCopyNumberByArm"), "gmmCopyNumber") <- class.labels.arm.df
 
   TapestriExperiment@gmmParams <- list("chr" = cn.model.table.chr, "arm" = cn.model.table.arm)
+  
+  TapestriExperiment@gmmParams$chr$simulated.cn.model.params <- cn.model.params.chr
+  TapestriExperiment@gmmParams$arm$simulated.cn.model.params <- cn.model.params.arm
+  
   cli::cli_bullets(c("v" = "Saving GMM models and metadata to {.var gmmParams} slot..."))
   cli::cli_progress_done()
 
