@@ -47,12 +47,15 @@ calcNormCounts <- function(TapestriExperiment,
 
   if (method == "kt") {
     read.counts.normal <- .ktNormCounts(raw.count.matrix, sensitivity)
+    TapestriExperiment@metadata$norm.method <- 'kt'
   } else if (method == "mb") {
     read.counts.normal <- .MBNormCounts(raw.count.matrix)
+    TapestriExperiment@metadata$norm.method <- 'mb'
   } else if (method == "libnorm") {
     read.counts.normal <- .LibSizeNorm(raw.count.matrix,
       scaling.factor = scaling.factor
     )
+    TapestriExperiment@metadata$norm.method <- 'libnorm'
   } else {
     warning("Method not recognized. Set method to 'mb' or libNorm'")
   }
