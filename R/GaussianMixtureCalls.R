@@ -33,7 +33,6 @@ calcGMMCopyNumber <- function(TapestriExperiment,
                               control.copy.number,
                               model.components = 1:5,
                               model.priors = NULL,
-                              filtered.tapestri.exp = NULL,
                               ...) {
   if (is.null(model.priors)) {
     model.priors <- rep(1, length(model.components))
@@ -47,9 +46,8 @@ calcGMMCopyNumber <- function(TapestriExperiment,
     cli::cli_abort("{.arg control.copy.number} has not been set. Use {.fun karyotapR::generateControlCopyNumberTemplate}.")
   }
 
-  if (length(cell.barcodes) == 0 & !is.null(filtered.tapestri.exp)) {
-    cli::cli_abort("cell.barcodes is empty. \n ATTENTION: In-silico reference is applied!")
-    filtered.tapestri.exp <- filtered.tapestri.exp
+  if (length(cell.barcodes) == 0) {
+    cli::cli_abort("cell.barcodes is empty.")
   } else {
     cli::cli_alert_info("Calculating GMMs using {length(cell.barcodes)} input cells.")
     filtered.tapestri.exp <- TapestriExperiment[, cell.barcodes]
