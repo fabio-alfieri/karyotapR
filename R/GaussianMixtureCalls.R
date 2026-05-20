@@ -29,7 +29,7 @@
 #' )
 #' }
 calcGMMCopyNumber <- function(TapestriExperiment,
-                              cell.barcodes == 0,
+                              cell.barcodes = 0,
                               control.copy.number,
                               model.components = 1:5,
                               model.priors = NULL,
