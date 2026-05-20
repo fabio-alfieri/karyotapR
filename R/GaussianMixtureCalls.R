@@ -162,12 +162,12 @@ calcGMMCopyNumber <- function(TapestriExperiment,
   cli::cli_progress_step("Generating probe values for {n.simulated.cells} simulated cells...")
 
   raw.counts <- SummarizedExperiment::assay(TapestriExperiment, "counts")
-  if(TapestriExperiment@metadata$norm.method == 'kt'){
+  # if(TapestriExperiment@metadata$norm.method == 'kt'){
+  #   norm.counts <- .MBNormCounts(raw.counts)
+  #   # norm.counts <- .ktNormCounts(raw.counts)
+  # }else{
     norm.counts <- .MBNormCounts(raw.counts)
-    # norm.counts <- .ktNormCounts(raw.counts)
-  }else{
-    norm.counts <- .MBNormCounts(raw.counts)
-  }
+  # }
   norm.counts[norm.counts == 0] <- 1 # pseudocount zeros to ones
   norm.counts <- as.list(as.data.frame(t(norm.counts))) # convert to list of probes
 
