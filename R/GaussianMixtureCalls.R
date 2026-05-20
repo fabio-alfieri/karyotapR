@@ -49,7 +49,7 @@ calcGMMCopyNumber <- function(TapestriExperiment,
       cli::cli_abort("{.arg control.copy.number} has not been set. Use {.fun karyotapR::generateControlCopyNumberTemplate}.")
     }
     
-    if (length(cell.barcode) == 0) {
+    if (length(cell.barcodes) == 0) {
       cli::cli_abort("cell.barcodes is empty.")
     } else {
       cli::cli_alert_info("Calculating GMMs using {length(cell.barcodes)} input cells.")
