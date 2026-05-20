@@ -134,7 +134,8 @@ calcGMMCopyNumber <- function(TapestriExperiment,
   SummarizedExperiment::assay(altExp(TapestriExperiment, "smoothedCopyNumberByArm"), "gmmCopyNumber") <- class.labels.arm.df
 
   TapestriExperiment@gmmParams <- list("chr" = cn.model.table.chr, "arm" = cn.model.table.arm)
-  TapestriExperiment@simulated.gmmParams <- list("chr" = cn.model.params.chr, "arm" = cn.model.params.arm)
+  TapestriExperiment@gmmParams$chr$cn.model.params.chr <- cn.model.params.chr
+  TapestriExperiment@gmmParams$arm$cn.model.params.chr <- cn.model.params.arm
   
   cli::cli_bullets(c("v" = "Saving GMM models and metadata to {.var gmmParams} slot..."))
   cli::cli_progress_done()
