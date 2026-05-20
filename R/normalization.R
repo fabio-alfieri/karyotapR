@@ -71,7 +71,8 @@ calcNormCounts <- function(TapestriExperiment,
   return(TapestriExperiment)
 }
 
-.ktNormCounts <- function(input.matrix, sensitivity){
+.ktNormCounts <- function(input.matrix,
+                          sensitivity = 0.5){
   # library size-like normalization 
   input.matrix <- apply(input.matrix, 2, function(x)(x)/sum(x)) 
   input.matrix <- input.matrix * (1/median(input.matrix[input.matrix != 0])) 
