@@ -29,10 +29,11 @@
 #' )
 #' }
 calcGMMCopyNumber <- function(TapestriExperiment,
-                              cell.barcodes,
+                              cell.barcodes == 0,
                               control.copy.number,
                               model.components = 1:5,
                               model.priors = NULL,
+                              in.silico.reference = NULL,
                               ...) {
   if (is.null(model.priors)) {
     model.priors <- rep(1, length(model.components))
@@ -42,40 +43,51 @@ calcGMMCopyNumber <- function(TapestriExperiment,
     }
   }
 
-  if (rlang::is_missing(control.copy.number)) {
-    cli::cli_abort("{.arg control.copy.number} has not been set. Use {.fun karyotapR::generateControlCopyNumberTemplate}.")
+  if(is.null(in.silico.reference)){
+    
+    if (rlang::is_missing(control.copy.number)) {
+      cli::cli_abort("{.arg control.copy.number} has not been set. Use {.fun karyotapR::generateControlCopyNumberTemplate}.")
+    }
+    
+    if (length(cell.barcode) == 0) {
+      cli::cli_abort("cell.barcodes is empty.")
+    } else {
+      cli::cli_alert_info("Calculating GMMs using {length(cell.barcodes)} input cells.")
+      filtered.tapestri.exp <- TapestriExperiment[, cell.barcodes]
+    }
+    
+    # simulate probe counts
+    simulated.norm.counts <- .generateSimulatedCNVCells(
+      TapestriExperiment = filtered.tapestri.exp,
+      control.copy.number = control.copy.number,
+      ...
+    )
+    
+    # smooth counts from simulated cells into smoothed copy number values
+    cli::cli_progress_step("Fitting Gaussian distributions to simulated cells...")
+    smoothing.method <- S4Vectors::metadata(TapestriExperiment)$smoothing.method
+    smoothing.weights <- S4Vectors::metadata(TapestriExperiment)$smoothing.weights
+    simulated.tapestri.experiment <- .smoothSimulatedCells(
+      normalized.counts = simulated.norm.counts,
+      probe.metadata = rowData(TapestriExperiment),
+      smoothing.method = smoothing.method,
+      smoothing.weights = smoothing.weights,
+      ...
+    )
+    
+    # fit Gaussian distributions to simulated cells
+    cn.model.params.chr <- .fitGaussianDistributions(simulated.tapestri.experiment = simulated.tapestri.experiment, chromosome.scope = "chr")
+    cn.model.params.arm <- .fitGaussianDistributions(simulated.tapestri.experiment = simulated.tapestri.experiment, chromosome.scope = "arm")
+    
+  }else{
+    
+    cli::cli_alert_info("Calculating GMMs using in-silico reference cells.")
+    
+    cn.model.params.chr <- in.silico.reference@cn.model.params.chr
+    cn.model.params.arm <- in.silico.reference@cn.model.params.arm
+    
   }
-
-  if (length(cell.barcodes) == 0) {
-    cli::cli_abort("cell.barcodes is empty.")
-  } else {
-    cli::cli_alert_info("Calculating GMMs using {length(cell.barcodes)} input cells.")
-    filtered.tapestri.exp <- TapestriExperiment[, cell.barcodes]
-  }
-
-  # simulate probe counts
-  simulated.norm.counts <- .generateSimulatedCNVCells(
-    TapestriExperiment = filtered.tapestri.exp,
-    control.copy.number = control.copy.number,
-    ...
-  )
-
-  # smooth counts from simulated cells into smoothed copy number values
-  cli::cli_progress_step("Fitting Gaussian distributions to simulated cells...")
-  smoothing.method <- S4Vectors::metadata(TapestriExperiment)$smoothing.method
-  smoothing.weights <- S4Vectors::metadata(TapestriExperiment)$smoothing.weights
-  simulated.tapestri.experiment <- .smoothSimulatedCells(
-    normalized.counts = simulated.norm.counts,
-    probe.metadata = rowData(TapestriExperiment),
-    smoothing.method = smoothing.method,
-    smoothing.weights = smoothing.weights,
-    ...
-  )
-
-  # fit Gaussian distributions to simulated cells
-  cn.model.params.chr <- .fitGaussianDistributions(simulated.tapestri.experiment = simulated.tapestri.experiment, chromosome.scope = "chr")
-  cn.model.params.arm <- .fitGaussianDistributions(simulated.tapestri.experiment = simulated.tapestri.experiment, chromosome.scope = "arm")
-
+  
   
   # calculate posterior probabilities for each data point under each model component
   cli::cli_progress_step("Calculating posterior probabilities...")
