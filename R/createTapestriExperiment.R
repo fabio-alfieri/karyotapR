@@ -246,7 +246,7 @@ createTapestriExperiment <- function(h5.filename,
   } else if (panel.id == "CO610") {
     barcodeProbe <- "CO610_AMP351"
     grnaProbe <- "CO610_AMP350"
-  } else if (panel.id == "CO810") {
+  } else if (panel.id == "CO810" | panel.id == "V4") {
     barcodeProbe <- "TAMPL46684"
     grnaProbe <- "TAMPL46683"
   } else {
@@ -354,7 +354,7 @@ createTapestriExperiment <- function(h5.filename,
     probe.metadata <- co293.metadata
   } else if (panel.id == "CO610") {
     probe.metadata <- co610.metadata
-  } else if (panel.id == "CO810") {
+  } else if (panel.id == "CO810" | panel.id == "V4") {
       probe.metadata <- co810.metadata
   }
 
