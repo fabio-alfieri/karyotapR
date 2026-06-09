@@ -82,7 +82,6 @@ calcGMMCopyNumber <- function(TapestriExperiment,
   }else{
     
     cli::cli_alert_info("Calculating GMMs using in-silico reference cells.")
-    
     cn.model.params.chr <- in.silico.reference$cn.model.params.chr
     cn.model.params.arm <- in.silico.reference$cn.model.params.arm
     
