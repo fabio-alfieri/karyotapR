@@ -178,7 +178,7 @@ calcCopyNumber <- function(TapestriExperiment,
 #' ) 
 #' tap.object <- calcSmoothCopyNumber(tap.object) 
 calcSmoothCopyNumber <- function(TapestriExperiment, method = "median", control.copy.number = NULL, 
-  sample.feature = "cluster", weight.range = c(0.5, 0.5), boost = 1.25) {
+  sample.feature = "cluster", weight.range = c(0.5, 0.5), boost = 1.25, cutoff = 2) {
   method <- tolower(method)
 
   if (method == "median") {
@@ -225,12 +225,12 @@ calcSmoothCopyNumber <- function(TapestriExperiment, method = "median", control.
       S4Vectors::metadata(TapestriExperiment)$probe.weights <- tap.exp.row.data
   }
   
-  boost_high_values <- function(x, cutoff = 2, boost = boost) {
+  boost_high_values <- function(x, cutoff = 2, boost = 3) {
     x_new <- x
     x_new[x > cutoff] <- cutoff + boost * (x[x > cutoff] - cutoff)
     return(x_new)
   }
-  ploidy.counts <- boost_high_values(ploidy.counts)
+  ploidy.counts <- boost_high_values(ploidy.counts, cutoff = cutoff, boost = boost)
 
   ploidy.tidy <- ploidy.counts %>%
     as.data.frame() %>%
