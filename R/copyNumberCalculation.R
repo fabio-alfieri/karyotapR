@@ -225,12 +225,12 @@ calcSmoothCopyNumber <- function(TapestriExperiment, method = "median", control.
       S4Vectors::metadata(TapestriExperiment)$probe.weights <- tap.exp.row.data
   }
   
-  boost_high_values <- function(x, cutoff = 2.5, boost = 1.5) {
+  boost_high_values <- function(x, cutoff = 2, boost = boost) {
     x_new <- x
     x_new[x > cutoff] <- cutoff + boost * (x[x > cutoff] - cutoff)
     return(x_new)
   }
-  ploidy.counts <- boost_high_values(ploidy.counts, cutoff = 2.5, boost = 1.5)
+  ploidy.counts <- boost_high_values(ploidy.counts)
 
   ploidy.tidy <- ploidy.counts %>%
     as.data.frame() %>%
