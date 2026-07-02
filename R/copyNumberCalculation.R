@@ -144,6 +144,11 @@ calcCopyNumber <- function(TapestriExperiment,
   return(TapestriExperiment)
 }
 
+.boost_high_values <- function(x, cutoff = 2.5, boost = 1.5) {
+  x_new <- x
+  x_new[x > cutoff] <- cutoff + boost * (x[x > cutoff] - cutoff)
+  return(x_new)
+}
 
 
 #' Smooth copy number values across chromosomes and chromosome arms
@@ -177,7 +182,7 @@ calcCopyNumber <- function(TapestriExperiment,
 #' ) 
 #' tap.object <- calcSmoothCopyNumber(tap.object) 
 calcSmoothCopyNumber <- function(TapestriExperiment, method = "median", control.copy.number = NULL, 
-  sample.feature = "cluster", weight.range = c(0.5, 0.5)) {
+  sample.feature = "cluster", weight.range = c(0.5, 0.5), boost = 1.25) {
   method <- tolower(method)
 
   if (method == "median") {
@@ -297,9 +302,11 @@ calcSmoothCopyNumber <- function(TapestriExperiment, method = "median", control.
     smoothed.ploidy.cytob <- smoothed.ploidy.cytob[order(match(rownames(smoothed.ploidy.cytob), 
                  ploidy.tidy$cytoband)), , drop = FALSE]
 
-  }else if(method == "weighted.median"){  #weighed median smoothing 
+  }else if(method == "weighted.median"){  # weighed median smoothing 
       
       ploidy.tidy <- ploidy.tidy %>% dplyr::left_join(tap.exp.row.data[, c("probe.id", "chr", "arm", "cytoband", "probe.weight")], by = "probe.id")
+      
+      ploidy.tidy <- .boost_high_values(ploidy.counts, cutoff = 2.5, boost = 1.5)
       
       # whole chromosome
       smoothed.ploidy.chr <- ploidy.tidy %>% 
