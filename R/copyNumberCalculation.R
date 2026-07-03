@@ -177,8 +177,9 @@ calcCopyNumber <- function(TapestriExperiment,
 #'   sample.feature = "test.cluster"
 #' ) 
 #' tap.object <- calcSmoothCopyNumber(tap.object) 
-calcSmoothCopyNumber <- function(TapestriExperiment, method = "median", control.copy.number = NULL, 
-  sample.feature = "cluster", weight.range = c(0.5, 0.5), boost = 1.25, cutoff = 2) {
+calcSmoothCopyNumber <- function(TapestriExperiment, method = "weighted.median", control.copy.number = NULL, 
+  sample.feature = "cluster", weight.range = c(0.5, 0.5), linear.correction == FALSE #, boost = 1.25, cutoff = 2
+  ) {
   method <- tolower(method)
 
   if (method == "median") {
@@ -210,7 +211,7 @@ calcSmoothCopyNumber <- function(TapestriExperiment, method = "median", control.
     tap.exp.row.data$cytoband <- paste0('chr',tap.exp.row.data$chr,tap.exp.row.data$cytoband)
 
 
-      tap.exp.row.data <- tap.exp.row.data %>% dplyr::left_join(control.copy.number, by = "cytoband")
+    tap.exp.row.data <- tap.exp.row.data %>% dplyr::left_join(control.copy.number, by = "cytoband")
         
       tap.exp.row.data$probe.weight <- tap.exp.row.data[, c("probe.id", "copy.number", "sample.label")] %>% 
           purrr::pmap(function(probe.id, copy.number, sample.label){
@@ -225,12 +226,12 @@ calcSmoothCopyNumber <- function(TapestriExperiment, method = "median", control.
       S4Vectors::metadata(TapestriExperiment)$probe.weights <- tap.exp.row.data
   }
   
-  boost_high_values <- function(x, cutoff = 2, boost = 3) {
-    x_new <- x
-    x_new[x > cutoff] <- cutoff + boost * (x[x > cutoff] - cutoff)
-    return(x_new)
-  }
-  ploidy.counts <- boost_high_values(ploidy.counts, cutoff = cutoff, boost = boost)
+  # boost_high_values <- function(x, cutoff = 2, boost = 3) {
+  #   x_new <- x
+  #   x_new[x > cutoff] <- cutoff + boost * (x[x > cutoff] - cutoff)
+  #   return(x_new)
+  # }
+  # ploidy.counts <- boost_high_values(ploidy.counts, cutoff = cutoff, boost = boost)
 
   ploidy.tidy <- ploidy.counts %>%
     as.data.frame() %>%
@@ -322,6 +323,39 @@ calcSmoothCopyNumber <- function(TapestriExperiment, method = "median", control.
                                         feature.id = smoothed.ploidy.chr[[2]], 
                                         value = as.numeric(smoothed.ploidy.chr[[3]])) 
       
+      if(linear.correction == TRUE){
+        cli::cli_progress_step("Applying linear correction on SmoothedCopyNumberByChr.", )
+        
+        reference.barcodes <- getTidyData(TapestriExperiment) %>% select(cell.barcode, cluster) %>% 
+          filter(cluster == control.copy.number$sample.label[1]) %>%
+          pull(cell.barcode)
+        
+        control.copy.number_chr <- control.copy.number
+        control.copy.number_chr$feature.id <- sub("^chr([0-9]+|X|Y).*", "\\1", control.copy.number_chr$arm)
+        control.copy.number_chr$cytoband <- NULL
+        control.copy.number_chr$arm <- NULL
+        control.copy.number_chr <- control.copy.number_chr[!duplicated(control.copy.number_chr),]
+        
+        reference.smoothed.ploidy <- smoothed.ploidy.chr %>% filter(cell.barcode %in% reference.barcodes) %>% merge(control.copy.number_chr)
+        
+        calibration <- reference.smoothed.ploidy %>%
+          group_by(copy.number) %>%
+          summarise(
+            median_smoothed = median(value, na.rm = TRUE),
+            n = n(),
+            .groups = "drop"
+          )
+        fit_calib <- lm(copy.number ~ median_smoothed, data = calibration)
+        cn.raw_all <- smoothed.ploidy.chr %>%
+          mutate(
+            correctedCopyNumber = predict(
+              fit_calib,
+              newdata = data.frame(median_smoothed = value)
+            )
+          )
+        smoothed.ploidy.chr$value <- cn.raw_all$correctedCopyNumber
+      }
+      
       smoothed.ploidy.chr <- tidyr::pivot_wider(smoothed.ploidy.chr, names_from = .data$cell.barcode, values_from = .data$value) %>% 
           tibble::column_to_rownames("feature.id")
       
@@ -341,6 +375,38 @@ calcSmoothCopyNumber <- function(TapestriExperiment, method = "median", control.
       smoothed.ploidy.arm <- data.frame(cell.barcode = smoothed.ploidy.arm[[1]], 
                                         feature.id = smoothed.ploidy.arm[[2]], 
                                         value = as.numeric(smoothed.ploidy.arm[[3]])) 
+      
+      if(linear.correction == TRUE){
+        cli::cli_progress_step("Applying linear correction on SmoothedCopyNumberByArm.", )
+        
+        reference.barcodes <- getTidyData(TapestriExperiment) %>% select(cell.barcode, cluster) %>% 
+          filter(cluster == control.copy.number$sample.label[1]) %>%
+          pull(cell.barcode)
+        
+        control.copy.number_arm <- control.copy.number
+        control.copy.number_arm$feature.id <- control.copy.number_arm$arm
+        control.copy.number_arm$cytoband <- NULL
+        control.copy.number_arm <- control.copy.number_arm[!duplicated(control.copy.number_arm),]
+        
+        reference.smoothed.ploidy <- smoothed.ploidy.arm %>% filter(cell.barcode %in% reference.barcodes) %>% merge(control.copy.number_arm)
+        
+        calibration <- reference.smoothed.ploidy %>%
+          group_by(copy.number) %>%
+          summarise(
+            median_smoothed = median(value, na.rm = TRUE),
+            n = n(),
+            .groups = "drop"
+          )
+        fit_calib <- lm(copy.number ~ median_smoothed, data = calibration)
+        cn.raw_all <- smoothed.ploidy.arm %>%
+          mutate(
+            correctedCopyNumber = predict(
+              fit_calib,
+              newdata = data.frame(median_smoothed = value)
+            )
+          )
+        smoothed.ploidy.arm$value <- cn.raw_all$correctedCopyNumber
+      }
       
       smoothed.ploidy.arm <- tidyr::pivot_wider(smoothed.ploidy.arm, names_from = .data$cell.barcode, values_from = .data$value) %>% 
           tibble::column_to_rownames("feature.id")
