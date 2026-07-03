@@ -323,7 +323,7 @@ calcSmoothCopyNumber <- function(TapestriExperiment, method = "weighted.median",
                                         feature.id = smoothed.ploidy.chr[[2]], 
                                         value = as.numeric(smoothed.ploidy.chr[[3]])) 
       
-      if(linear.correction == TRUE){
+      if(linear.correction){
         cli::cli_progress_step("Applying linear correction on SmoothedCopyNumberByChr.", )
         
         reference.barcodes <- getTidyData(TapestriExperiment) %>% select(cell.barcode, cluster) %>% 
@@ -376,7 +376,7 @@ calcSmoothCopyNumber <- function(TapestriExperiment, method = "weighted.median",
                                         feature.id = smoothed.ploidy.arm[[2]], 
                                         value = as.numeric(smoothed.ploidy.arm[[3]])) 
       
-      if(linear.correction == TRUE){
+      if(linear.correction){
         cli::cli_progress_step("Applying linear correction on SmoothedCopyNumberByArm.", )
         
         reference.barcodes <- getTidyData(TapestriExperiment) %>% select(cell.barcode, cluster) %>% 
