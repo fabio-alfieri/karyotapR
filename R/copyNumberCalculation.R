@@ -178,7 +178,7 @@ calcCopyNumber <- function(TapestriExperiment,
 #' ) 
 #' tap.object <- calcSmoothCopyNumber(tap.object) 
 calcSmoothCopyNumber <- function(TapestriExperiment, method = "weighted.median", control.copy.number = NULL, 
-  sample.feature = "cluster", weight.range = c(0.5, 0.5), linear.correction == FALSE #, boost = 1.25, cutoff = 2
+  sample.feature = "cluster", weight.range = c(0.5, 0.5), linear.correction = FALSE #, boost = 1.25, cutoff = 2
   ) {
   method <- tolower(method)
 
