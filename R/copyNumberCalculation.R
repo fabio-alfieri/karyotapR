@@ -335,9 +335,9 @@ calcSmoothCopyNumber <- function(TapestriExperiment, method = "weighted.median",
               reference.barcodes <- getTidyData(TapestriExperiment) %>% select(cell.barcode, sample.id) %>% 
                 filter(sample.id == control.copy.number$sample.label[1]) %>%
                 pull(cell.barcode)
-            })
+            }, silent = TRUE)
           }
-        })
+        }, silent = TRUE)
         
         control.copy.number_chr <- control.copy.number
         control.copy.number_chr$feature.id <- sub("^chr([0-9]+|X|Y).*", "\\1", control.copy.number_chr$arm)
@@ -388,18 +388,18 @@ calcSmoothCopyNumber <- function(TapestriExperiment, method = "weighted.median",
       if(linear.correction){
         cli::cli_progress_step("Applying linear correction on SmoothedCopyNumberByArm.", )
         
-        tryCatch({
+        try({
           reference.barcodes <- getTidyData(TapestriExperiment) %>% select(cell.barcode, cluster) %>% 
             filter(cluster == control.copy.number$sample.label[1]) %>%
             pull(cell.barcode)
           if(is_empty(reference.barcodes)){
-            tryCatch({
+            try({
               reference.barcodes <- getTidyData(TapestriExperiment) %>% select(cell.barcode, sample.id) %>% 
                 filter(sample.id == control.copy.number$sample.label[1]) %>%
                 pull(cell.barcode)
-            })
+            }, silent = TRUE)
           }
-        })
+        }, silent = TRUE)
         
         control.copy.number_arm <- control.copy.number
         control.copy.number_arm$feature.id <- control.copy.number_arm$arm
