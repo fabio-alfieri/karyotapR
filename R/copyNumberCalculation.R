@@ -326,12 +326,12 @@ calcSmoothCopyNumber <- function(TapestriExperiment, method = "weighted.median",
       if(linear.correction){
         cli::cli_progress_step("Applying linear correction on SmoothedCopyNumberByChr.", )
         
-        tryCatch({
+        try({
           reference.barcodes <- getTidyData(TapestriExperiment) %>% select(cell.barcode, cluster) %>% 
             filter(cluster == control.copy.number$sample.label[1]) %>%
             pull(cell.barcode)
           if(is_empty(reference.barcodes)){
-            tryCatch({
+            try({
               reference.barcodes <- getTidyData(TapestriExperiment) %>% select(cell.barcode, sample.id) %>% 
                 filter(sample.id == control.copy.number$sample.label[1]) %>%
                 pull(cell.barcode)
