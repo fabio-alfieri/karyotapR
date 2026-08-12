@@ -15,18 +15,18 @@
 classifyControlCells <- function(TapestriExperiment, input.object, coldata.column, coldata.value, plot = TRUE, ntrees = 100, nthreads = 1){
   
   input.af <- getTidyData(input.object, alt.exp = "alleleFrequency") %>% dplyr::filter(.data[[coldata.column]] == {{coldata.value}})
-  input.af <- input.af %>% pivot_wider(names_from = "feature.id", values_from = "alleleFrequency", id_cols = "cell.barcode") %>% 
-    column_to_rownames(var = "cell.barcode")
+  input.af <- input.af %>% tidyr::pivot_wider(names_from = "feature.id", values_from = "alleleFrequency", id_cols = "cell.barcode") %>% 
+    tibble::column_to_rownames(var = "cell.barcode")
   
   target.af <- getTidyData(TapestriExperiment, alt.exp = "alleleFrequency") %>% 
-    pivot_wider(names_from = "feature.id", values_from = "alleleFrequency", id_cols = "cell.barcode") %>% 
-    column_to_rownames("cell.barcode")
+    tidyr::pivot_wider(names_from = "feature.id", values_from = "alleleFrequency", id_cols = "cell.barcode") %>% 
+    tibble::column_to_rownames("cell.barcode")
   
   shared.features <- intersect(colnames(input.af), colnames(target.af))
   input.af <- input.af[,shared.features]
   target.af <- target.af[,shared.features]
   
-  model <- isolation.forest(data = input.af, ntrees = ntrees, nthreads = nthreads)
+  model <- isotree::isolation.forest(data = input.af, ntrees = ntrees, nthreads = nthreads)
   
   predictions <- predict(model, target.af)
   
