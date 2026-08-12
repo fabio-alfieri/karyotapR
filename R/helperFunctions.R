@@ -1,3 +1,48 @@
+#' Identify RPE1 cell on UMAP
+#'
+#' @param target.object 
+#' @param input.object 
+#' @param coldata.column 
+#' @param coldata.value 
+#' @param plot 
+#' @param ntrees 
+#' @param nthreads 
+#'
+#' @returns Add anomaly score to the tapestri object
+#' @export
+#'
+#' @examples
+classifyControlCells <- function(TapestriExperiment, input.object, coldata.column, coldata.value, plot = TRUE, ntrees = 100, nthreads = 1){
+  
+  input.af <- getTidyData(input.object, alt.exp = "alleleFrequency") %>% filter(.data[[coldata.column]] == {{coldata.value}})
+  input.af <- input.af %>% pivot_wider(names_from = "feature.id", values_from = "alleleFrequency", id_cols = "cell.barcode") %>% 
+    column_to_rownames(var = "cell.barcode")
+  
+  target.af <- getTidyData(TapestriExperiment, alt.exp = "alleleFrequency") %>% 
+    pivot_wider(names_from = "feature.id", values_from = "alleleFrequency", id_cols = "cell.barcode") %>% 
+    column_to_rownames("cell.barcode")
+  
+  shared.features <- intersect(colnames(input.af), colnames(target.af))
+  input.af <- input.af[,shared.features]
+  target.af <- target.af[,shared.features]
+  
+  model <- isolation.forest(data = input.af, ntrees = ntrees, nthreads = nthreads)
+  
+  predictions <- predict(model, target.af)
+  
+  if(any(colnames(TapestriExperiment) != names(predictions))){
+    stop("Something went wrong. The number of predictions does not match the number of cells in the target object.")
+  }
+  
+  colData(TapestriExperiment)$anomaly.score <- predictions
+  
+  if(plot){
+    hist(predictions, breaks = 50)
+  }
+  
+  return(TapestriExperiment)
+}
+
 #' Print the top-left corner of a matrix
 #'
 #' Outputs up to 5 rows and columns of the input matrix object (with `rownames` and `colnames`) to get a quick look without filling the console.
