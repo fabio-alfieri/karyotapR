@@ -14,7 +14,7 @@
 #' @examples
 classifyControlCells <- function(TapestriExperiment, input.object, coldata.column, coldata.value, plot = TRUE, ntrees = 100, nthreads = 1){
   
-  input.af <- getTidyData(input.object, alt.exp = "alleleFrequency") %>% filter(.data[[coldata.column]] == {{coldata.value}})
+  input.af <- getTidyData(input.object, alt.exp = "alleleFrequency") %>% dplyr::filter(.data[[coldata.column]] == {{coldata.value}})
   input.af <- input.af %>% pivot_wider(names_from = "feature.id", values_from = "alleleFrequency", id_cols = "cell.barcode") %>% 
     column_to_rownames(var = "cell.barcode")
   
