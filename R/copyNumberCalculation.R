@@ -434,29 +434,29 @@ calcSmoothCopyNumber <- function(TapestriExperiment, method = "weighted.median",
 
 
       # cytobands
-      smoothed.ploidy.cytob <- ploidy.tidy %>%
-          dplyr::group_split(.data$cytoband, .data$cell.barcode, .keep = TRUE) %>%
-          lapply(function(x){
-              result <- round(matrixStats::weightedMedian(x = x$ploidy, w = x$probe.weight), 3)
-              return(list(x$cell.barcode[1], x$cytoband[1], result))
-          }) %>%
-          purrr::list_transpose()
-
-      smoothed.ploidy.cytob <- data.frame(cell.barcode = smoothed.ploidy.cytob[[1]],
-                                          feature.id = smoothed.ploidy.cytob[[2]],
-                                          value = as.numeric(smoothed.ploidy.cytob[[3]]))
-
-      smoothed.ploidy.cytob <- tidyr::pivot_wider(smoothed.ploidy.cytob, names_from = .data$cell.barcode, values_from = .data$value) %>%
-          tibble::column_to_rownames("feature.id")
+      # smoothed.ploidy.cytob <- ploidy.tidy %>%
+      #     dplyr::group_split(.data$cytoband, .data$cell.barcode, .keep = TRUE) %>%
+      #     lapply(function(x){
+      #         result <- round(matrixStats::weightedMedian(x = x$ploidy, w = x$probe.weight), 3)
+      #         return(list(x$cell.barcode[1], x$cytoband[1], result))
+      #     }) %>%
+      #     purrr::list_transpose()
+      # 
+      # smoothed.ploidy.cytob <- data.frame(cell.barcode = smoothed.ploidy.cytob[[1]],
+      #                                     feature.id = smoothed.ploidy.cytob[[2]],
+      #                                     value = as.numeric(smoothed.ploidy.cytob[[3]]))
+      # 
+      # smoothed.ploidy.cytob <- tidyr::pivot_wider(smoothed.ploidy.cytob, names_from = .data$cell.barcode, values_from = .data$value) %>%
+      #     tibble::column_to_rownames("feature.id")
 
       # reorder to march input matrix
-      smoothed.ploidy.cytob <- smoothed.ploidy.cytob[, colnames(ploidy.counts)]
+      # smoothed.ploidy.cytob <- smoothed.ploidy.cytob[, colnames(ploidy.counts)]
      
   }
 
   discrete.ploidy.chr <- round(smoothed.ploidy.chr, 0)
   discrete.ploidy.arm <- round(smoothed.ploidy.arm, 0)
-  discrete.ploidy.cytob <- round(smoothed.ploidy.cytob, 0)
+  # discrete.ploidy.cytob <- round(smoothed.ploidy.cytob, 0)
   
   
   smoothed.ploidy.chr <- SingleCellExperiment::SingleCellExperiment(list(
@@ -469,18 +469,18 @@ calcSmoothCopyNumber <- function(TapestriExperiment, method = "weighted.median",
     discreteCopyNumber = discrete.ploidy.arm
   ))
   
-  smoothed.ploidy.cytob <- SingleCellExperiment::SingleCellExperiment(list(
-    smoothedCopyNumber = smoothed.ploidy.cytob,
-    discreteCopyNumber = discrete.ploidy.cytob
-  ))
+  # smoothed.ploidy.cytob <- SingleCellExperiment::SingleCellExperiment(list(
+  #   smoothedCopyNumber = smoothed.ploidy.cytob,
+  #   discreteCopyNumber = discrete.ploidy.cytob
+  # ))
 
   smoothed.ploidy.chr <- .TapestriExperiment(smoothed.ploidy.chr)
   smoothed.ploidy.arm <- .TapestriExperiment(smoothed.ploidy.arm)
-  smoothed.ploidy.cytob <- .TapestriExperiment(smoothed.ploidy.cytob)
+  # smoothed.ploidy.cytob <- .TapestriExperiment(smoothed.ploidy.cytob)
   
   SingleCellExperiment::altExp(TapestriExperiment, "smoothedCopyNumberByChr", withDimnames = TRUE) <- smoothed.ploidy.chr
   SingleCellExperiment::altExp(TapestriExperiment, "smoothedCopyNumberByArm", withDimnames = TRUE) <- smoothed.ploidy.arm
-  SingleCellExperiment::altExp(TapestriExperiment, "smoothedCopyNumberByCytob", withDimnames = TRUE) <- smoothed.ploidy.cytob
+  # SingleCellExperiment::altExp(TapestriExperiment, "smoothedCopyNumberByCytob", withDimnames = TRUE) <- smoothed.ploidy.cytob
   
   return(TapestriExperiment)
 }
