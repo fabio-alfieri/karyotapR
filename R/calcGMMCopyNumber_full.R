@@ -45,7 +45,7 @@ calcGMMCopyNumber.full <- function(TapestriExperiment,
   # fit Gaussian distributions to simulated cells
   cn.model.params.chr <- .fitGaussianDistributions(simulated.tapestri.experiment = simulated.tapestri.experiment, chromosome.scope = "chr")
   cn.model.params.arm <- .fitGaussianDistributions(simulated.tapestri.experiment = simulated.tapestri.experiment, chromosome.scope = "arm")
-  cn.model.params.cytob <- .fitGaussianDistributions(simulated.tapestri.experiment = simulated.tapestri.experiment, chromosome.scope = "cytoband")
+  # cn.model.params.cytob <- .fitGaussianDistributions(simulated.tapestri.experiment = simulated.tapestri.experiment, chromosome.scope = "cytoband")
 
   # calculate posterior probabilities for each data point under each model component
   cli::cli_progress_step("Calculating posterior probabilities...")
@@ -63,20 +63,20 @@ calcGMMCopyNumber.full <- function(TapestriExperiment,
     model.priors = model.priors,
     chromosome.scope = "arm"
   )
-  cn.model.table.cytob <- .calcClassPosteriors(
-    TapestriExperiment = TapestriExperiment,
-    cn.model.params = cn.model.params.cytob,
-    model.components = model.components,
-    model.priors = model.priors,
-    chromosome.scope = "cytoband"
-  )
+  # cn.model.table.cytob <- .calcClassPosteriors(
+  #   TapestriExperiment = TapestriExperiment,
+  #   cn.model.params = cn.model.params.cytob,
+  #   model.components = model.components,
+  #   model.priors = model.priors,
+  #   chromosome.scope = "cytoband"
+  # )
 
 
   # call copy number values from posterior probabilities
   cli::cli_progress_step("Calling copy number from posterior probabilities...")
   cn.model.table.chr <- .callCopyNumberClasses(cn.model.table.chr)
   cn.model.table.arm <- .callCopyNumberClasses(cn.model.table.arm)
-  cn.model.table.cytob <- .callCopyNumberClasses(cn.model.table.cytob)
+  # cn.model.table.cytob <- .callCopyNumberClasses(cn.model.table.cytob)
   cli::cli_progress_done()
 
   # transform copy number calls to matrix
@@ -113,21 +113,21 @@ calcGMMCopyNumber.full <- function(TapestriExperiment,
   SummarizedExperiment::assay(altExp(TapestriExperiment, "smoothedCopyNumberByArm"), "gmmCopyNumber") <- class.labels.arm.df
 
   # cytobands
-  cli::cli_bullets(c("v" = "Saving chromosome arm copy number calls to altExp: smoothedCopyNumberByCytob, assay: gmmCopyNumber..."))
+  # cli::cli_bullets(c("v" = "Saving chromosome arm copy number calls to altExp: smoothedCopyNumberByCytob, assay: gmmCopyNumber..."))
+  # 
+  # class.labels.cytob.df <- cn.model.table.cytob %>%
+  #   dplyr::pull("cn.class") %>%
+  #   purrr::map(\(x) tidyr::pivot_wider(x,
+  #     names_from = "cell.barcode",
+  #     values_from = "cn.class"
+  #   )) %>%
+  #   purrr::list_rbind() %>%
+  #   as.data.frame() %>%
+  #   magrittr::set_rownames(cn.model.table.cytob$feature.id)
+  # 
+  # SummarizedExperiment::assay(altExp(TapestriExperiment, "smoothedCopyNumberByCytob"), "gmmCopyNumber") <- class.labels.cytob.df
 
-  class.labels.cytob.df <- cn.model.table.cytob %>%
-    dplyr::pull("cn.class") %>%
-    purrr::map(\(x) tidyr::pivot_wider(x,
-      names_from = "cell.barcode",
-      values_from = "cn.class"
-    )) %>%
-    purrr::list_rbind() %>%
-    as.data.frame() %>%
-    magrittr::set_rownames(cn.model.table.cytob$feature.id)
-
-  SummarizedExperiment::assay(altExp(TapestriExperiment, "smoothedCopyNumberByCytob"), "gmmCopyNumber") <- class.labels.cytob.df
-
-  TapestriExperiment@gmmParams <- list("chr" = cn.model.table.chr, "arm" = cn.model.table.arm, "cytoband" = cn.model.table.cytob)
+  # TapestriExperiment@gmmParams <- list("chr" = cn.model.table.chr, "arm" = cn.model.table.arm, "cytoband" = cn.model.table.cytob)
   cli::cli_bullets(c("v" = "Saving GMM models and metadata to {.var gmmParams} slot..."))
   cli::cli_progress_done()
 
