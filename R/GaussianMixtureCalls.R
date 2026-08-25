@@ -34,6 +34,9 @@ calcGMMCopyNumber <- function(TapestriExperiment,
                               model.components = 1:5,
                               model.priors = NULL,
                               in.silico.reference = NULL,
+                              ploidy = NULL,
+                              ploidy.feature = "cluster",
+                              known.ploidy = NULL,
                               ...) {
   if (is.null(model.priors)) {
     model.priors <- rep(1, length(model.components))
@@ -88,6 +91,30 @@ calcGMMCopyNumber <- function(TapestriExperiment,
   }
   
   
+  prediction.assay <- "smoothedCopyNumber"
+  if (!is.null(ploidy)) {
+    if (identical(ploidy, "auto")) {
+      ploidy.table <- estimatePloidyFromAF(
+        TapestriExperiment,
+        sample.feature = ploidy.feature,
+        known.ploidy = known.ploidy)
+    } else {
+      ploidy.table <- data.frame(
+        population = names(ploidy),
+        estimated.ploidy =
+          as.numeric(ploidy),
+        call = "user_defined")
+    }
+    TapestriExperiment <-
+      .applyPloidyScaling(
+        TapestriExperiment,
+        ploidy.table = ploidy.table,
+        sample.feature =
+          ploidy.feature)
+    prediction.assay <-
+      "ploidyAdjustedSmoothedCopyNumber"
+  }
+  
   # calculate posterior probabilities for each data point under each model component
   cli::cli_progress_step("Calculating posterior probabilities...")
   cn.model.table.chr <- .calcClassPosteriors(
@@ -95,14 +122,16 @@ calcGMMCopyNumber <- function(TapestriExperiment,
     cn.model.params = cn.model.params.chr,
     model.components = model.components,
     model.priors = model.priors,
-    chromosome.scope = "chr"
+    chromosome.scope = "chr",
+    prediction.assay = prediction.assay
   )
   cn.model.table.arm <- .calcClassPosteriors(
     TapestriExperiment = TapestriExperiment,
     cn.model.params = cn.model.params.arm,
     model.components = model.components,
     model.priors = model.priors,
-    chromosome.scope = "arm"
+    chromosome.scope = "arm",
+    prediction.assay = prediction.assay
   )
 
   # call copy number values from posterior probabilities
@@ -283,31 +312,39 @@ calcGMMCopyNumber <- function(TapestriExperiment,
 }
 
 # get probabilities for belonging to a given component of the Gaussian mixture
-.calcClassPosteriors <- function(TapestriExperiment, cn.model.params, model.components, model.priors, chromosome.scope) {
+.calcClassPosteriors <- function(TapestriExperiment, 
+                                 cn.model.params, 
+                                 model.components,
+                                 model.priors, 
+                                 chromosome.scope,
+                                 prediction.assay = "smoothedCopyNumber") {
   components.filtered <- paste0("sim_cn", model.components)
 
   if (chromosome.scope == "chr" | chromosome.scope == "chromosome") {
     sim.data.tidy <- getTidyData(TapestriExperiment,
       alt.exp = "smoothedCopyNumberByChr",
-      assay = "smoothedCopyNumber"
+      assay = prediction.assay
     )
   } else if (chromosome.scope == "arm") {
     sim.data.tidy <- getTidyData(TapestriExperiment,
       alt.exp = "smoothedCopyNumberByArm",
-      assay = "smoothedCopyNumber"
+      assay = prediction.assay
     )
   } else if (chromosome.scope == "cytoband") {
     sim.data.tidy <- getTidyData(TapestriExperiment,
       alt.exp = "smoothedCopyNumberByCytob",
-      assay = "smoothedCopyNumber"
+      assay = prediction.assay
     )
   } else {
     cli::cli_abort("chromosome.scope should be 'chr', 'arm' or 'cytoband'")
   }
+  
+  sim.data.tidy <- sim.data.tidy %>%
+    dplyr::rename(smoothedCopyNumber = dplyr::all_of(prediction.assay))
 
   # get smoothed copy number and combine in tibble with copy number model parameters
   smoothed.cn.df <- sim.data.tidy %>%
-    dplyr::select("feature.id", "cell.barcode", "smoothedCopyNumber") %>%
+    dplyr::select("feature.id", "cell.barcode", prediction.assay) %>%
     tidyr::nest(.by = "feature.id", .key = "smoothed.cn")
   cn.params.df <- cn.model.params %>%
     dplyr::filter(.data$cn.sim.class %in% components.filtered) %>%
@@ -317,7 +354,7 @@ calcGMMCopyNumber <- function(TapestriExperiment,
   # iterate over both lists in parallel to get probability density function values across all GMM components for all data points
   gmm.table <- gmm.table %>% dplyr::mutate("pdf" = purrr::map2(.data$smoothed.cn, .data$model, function(smoothed.cn, model) {
     df <- purrr::pmap(model, function(cn.sim.class, mean, sd) {
-      stats::setNames(data.frame(stats::dnorm(smoothed.cn[["smoothedCopyNumber"]], mean = mean, sd = sd)), cn.sim.class)
+      stats::setNames(data.frame(stats::dnorm(smoothed.cn[[prediction.assay]], mean = mean, sd = sd)), cn.sim.class)
     }) %>%
       purrr::list_cbind()
     rownames(df) <- smoothed.cn[["cell.barcode"]]
