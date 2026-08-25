@@ -339,9 +339,8 @@ calcGMMCopyNumber <- function(TapestriExperiment,
     cli::cli_abort("chromosome.scope should be 'chr', 'arm' or 'cytoband'")
   }
   
-  sim.data.tidy <- sim.data.tidy %>%
-    dplyr::rename(smoothedCopyNumber = dplyr::all_of(prediction.assay))
-
+  sim.data.tidy <- sim.data.tidy %>% dplyr::transmute(feature.id,cell.barcode,smoothedCopyNumber =.data[[prediction.assay]])
+  
   # get smoothed copy number and combine in tibble with copy number model parameters
   smoothed.cn.df <- sim.data.tidy %>%
     dplyr::select("feature.id", "cell.barcode", prediction.assay) %>%
@@ -350,33 +349,65 @@ calcGMMCopyNumber <- function(TapestriExperiment,
     dplyr::filter(.data$cn.sim.class %in% components.filtered) %>%
     tidyr::nest(.by = "feature.id", .key = "model")
   gmm.table <- dplyr::inner_join(smoothed.cn.df, cn.params.df, by = "feature.id")
-
-  # iterate over both lists in parallel to get probability density function values across all GMM components for all data points
-  gmm.table <- gmm.table %>% dplyr::mutate("pdf" = purrr::map2(.data$smoothed.cn, .data$model, function(smoothed.cn, model) {
-    df <- purrr::pmap(model, function(cn.sim.class, mean, sd) {
-      stats::setNames(data.frame(stats::dnorm(smoothed.cn[[prediction.assay]], mean = mean, sd = sd)), cn.sim.class)
-    }) %>%
-      purrr::list_cbind()
-    rownames(df) <- smoothed.cn[["cell.barcode"]]
-    df <- tibble::as_tibble(df)
-    return(df)
-  }))
-
-  # get Bayes theorem denominator for each GMM (aka evidence or marginal likelihood)
+  
+  # ==========================================================
+  # CALCULATE PDF FOR EACH GMM COMPONENT
+  # ==========================================================
+  
   gmm.table <- gmm.table %>%
-    dplyr::mutate("model.evidence" = purrr::map(.data$pdf, function(pdf) {
-      as.matrix(pdf) %*% model.priors %>% drop()
-    }))
-
-  # calculate probability of a data point belonging to each copy number class (i.e. copy number class given a data point)
-  gmm.table <- gmm.table %>% dplyr::mutate("cn.probability" = purrr::map2(.data$pdf, .data$model.evidence, function(pdf, model.evidence) {
-    probs <- sweep(pdf, 2, model.priors, "*") # priors multiplied through each column
-    probs <- sweep(probs, 1, model.evidence, "/") # model.evidence divided through each row
-    probs <- tibble::as_tibble(probs)
-    return(probs)
-  }))
-
-  return(gmm.table)
+    dplyr::mutate(
+      pdf = purrr::map2(
+        .data$smoothed.cn,
+        .data$model,
+        function(smoothed.cn,model) {
+          df <- purrr::pmap(
+            model,
+            function(cn.sim.class,mean,sd) {
+              stats::setNames(
+                data.frame(
+                  stats::dnorm(
+                    smoothed.cn[
+                      ["smoothedCopyNumber"]],
+                    mean = mean,
+                    sd = sd)),
+                cn.sim.class)}) %>%purrr::list_cbind()
+          rownames(df) <-
+            smoothed.cn[
+              ["cell.barcode"]
+            ]
+          df <- tibble::as_tibble(df)
+          return(df)}))
+  
+  # ==========================================================
+  # BAYES DENOMINATOR / MODEL EVIDENCE
+  # ==========================================================
+  
+  gmm.table <- gmm.table %>%
+    dplyr::mutate(
+      model.evidence = purrr::map(
+        .data$pdf,
+        function(pdf) {
+          as.matrix(pdf) %*%
+            model.priors %>%
+            drop()}))
+  
+  # ==========================================================
+  # POSTERIOR PROBABILITIES
+  # ==========================================================
+  
+  gmm.table <- gmm.table %>%
+    dplyr::mutate(
+      cn.probability = purrr::map2(
+        .data$pdf,
+        .data$model.evidence,
+        function(pdf,model.evidence) {
+          probs <- sweep(pdf,2,model.priors,"*")
+          probs <- sweep(probs,1,model.evidence,"/")
+          probs <- tibble::as_tibble(probs)
+          
+          return(probs)}))
+  
+  return(gmm.table
 }
 
 # assign copy numbers to data points by highest posterior probability
