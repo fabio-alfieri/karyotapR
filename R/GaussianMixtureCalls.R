@@ -363,8 +363,7 @@ calcGMMCopyNumber <- function(TapestriExperiment,
               stats::setNames(
                 data.frame(
                   stats::dnorm(
-                    smoothed.cn[
-                      ["smoothedCopyNumber"]],
+                    smoothed.cn[["smoothedCopyNumber"]],
                     mean = mean,
                     sd = sd)),
                 cn.sim.class)}) %>%purrr::list_cbind()
