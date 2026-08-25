@@ -101,18 +101,15 @@ calcGMMCopyNumber <- function(TapestriExperiment,
     } else {
       ploidy.table <- data.frame(
         population = names(ploidy),
-        estimated.ploidy =
-          as.numeric(ploidy),
+        estimated.ploidy =as.numeric(ploidy),
         call = "user_defined")
     }
     TapestriExperiment <-
       .applyPloidyScaling(
         TapestriExperiment,
         ploidy.table = ploidy.table,
-        sample.feature =
-          ploidy.feature)
-    prediction.assay <-
-      "ploidyAdjustedSmoothedCopyNumber"
+        sample.feature = ploidy.feature)
+    prediction.assay <- "ploidyAdjustedSmoothedCopyNumber"
   }
   
   # calculate posterior probabilities for each data point under each model component
@@ -371,10 +368,7 @@ calcGMMCopyNumber <- function(TapestriExperiment,
                     mean = mean,
                     sd = sd)),
                 cn.sim.class)}) %>%purrr::list_cbind()
-          rownames(df) <-
-            smoothed.cn[
-              ["cell.barcode"]
-            ]
+          rownames(df) <- smoothed.cn[["cell.barcode"]]
           df <- tibble::as_tibble(df)
           return(df)}))
   
