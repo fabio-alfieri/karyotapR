@@ -19,18 +19,27 @@ estimatePloidyFromAF <- function(
     TapestriExperiment,
     sample.feature = "cluster",
     min.cells = 20,
-    min.variants = 20,
-    tolerance = 0.06,
+    min.variants = 50,
+    min.variants.per.arm = 8,
+    min.informative.arms = 10,
+    tolerance = 0.05,
+    min.triploid.arm.fraction = 0.55,
     known.ploidy = NULL
 ) {
   
-  if (!"alleleFrequency" %in%
-      SingleCellExperiment::altExpNames(TapestriExperiment)) {
-    
+  if (
+    !"alleleFrequency" %in%
+    SingleCellExperiment::altExpNames(TapestriExperiment)
+  ) {
     cli::cli_abort(
       "alleleFrequency altExp not found."
     )
   }
+  
+  
+  # ==========================================================
+  # AF DATA
+  # ==========================================================
   
   af.exp <- SingleCellExperiment::altExp(
     TapestriExperiment,
@@ -42,10 +51,50 @@ estimatePloidyFromAF <- function(
     "alleleFrequency"
   )
   
-  # Mission Bio may store AF as 0-100
   if (max(af, na.rm = TRUE) > 1.5) {
     af <- af / 100
   }
+  
+  
+  variant.meta <- as.data.frame(
+    SummarizedExperiment::rowData(
+      af.exp
+    )
+  )
+  
+  
+  # ==========================================================
+  # GET ARM INFORMATION
+  #
+  # Match variant amplicon -> main experiment amplicon -> arm
+  # ==========================================================
+  
+  if (
+    "amplicon.id" %in% colnames(variant.meta)
+  ) {
+    
+    idx <- match(
+      variant.meta$amplicon.id,
+      rownames(TapestriExperiment)
+    )
+    
+    variant.meta$arm <-
+      as.character(
+        SummarizedExperiment::rowData(
+          TapestriExperiment
+        )$arm[idx]
+      )
+    
+  } else {
+    
+    variant.meta$arm <- NA_character_
+    
+  }
+  
+  
+  # ==========================================================
+  # POPULATION LABELS
+  # ==========================================================
   
   groups <- as.character(
     SummarizedExperiment::colData(
@@ -53,15 +102,57 @@ estimatePloidyFromAF <- function(
     )[[sample.feature]]
   )
   
-  names(groups) <- colnames(TapestriExperiment)
+  names(groups) <-
+    colnames(TapestriExperiment)
   
-  groups <- groups[colnames(af)]
+  groups <- groups[
+    colnames(af)
+  ]
+  
   
   group.names <- unique(groups)
+  
+  
+  # ==========================================================
+  # ANALYZE EACH POPULATION
+  # ==========================================================
   
   results <- lapply(
     group.names,
     function(current.group) {
+      
+      
+      # --------------------------------------------------------
+      # User-defined ploidy takes precedence
+      # --------------------------------------------------------
+      
+      if (
+        !is.null(known.ploidy) &&
+        current.group %in%
+        names(known.ploidy)
+      ) {
+        
+        return(
+          tibble::tibble(
+            population = current.group,
+            n.variants = NA_integer_,
+            n.informative.arms = NA_integer_,
+            support.2n = NA_real_,
+            support.3n = NA_real_,
+            support.3n.left = NA_real_,
+            support.3n.right = NA_real_,
+            triploid.arm.fraction = NA_real_,
+            estimated.ploidy =
+              as.numeric(
+                known.ploidy[
+                  current.group
+                ]
+              ),
+            call = "known"
+          )
+        )
+      }
+      
       
       cells <- which(
         groups == current.group
@@ -73,9 +164,19 @@ estimatePloidyFromAF <- function(
         drop = FALSE
       ]
       
+      
+      # --------------------------------------------------------
+      # Number of cells measured per SNP
+      # --------------------------------------------------------
+      
       n.obs <- rowSums(
         !is.na(x)
       )
+      
+      
+      # --------------------------------------------------------
+      # Pseudo-bulk VAF
+      # --------------------------------------------------------
       
       pseudo.bulk.af <-
         matrixStats::rowMedians(
@@ -83,147 +184,292 @@ estimatePloidyFromAF <- function(
           na.rm = TRUE
         )
       
-      keep <- (
-        n.obs >= min.cells &
-          pseudo.bulk.af >= 0.10 &
-          pseudo.bulk.af <= 0.90
-      )
       
-      vaf <- pseudo.bulk.af[keep]
+      df <- tibble::tibble(
+        AF = pseudo.bulk.af,
+        n.cells = n.obs,
+        arm = variant.meta$arm
+      ) %>%
+        
+        filter(
+          n.cells >= min.cells,
+          AF >= 0.10,
+          AF <= 0.90,
+          !is.na(arm)
+        )
       
-      n.variants <- length(vaf)
       
-      if (n.variants < min.variants) {
+      n.variants <- nrow(df)
+      
+      
+      # ======================================================
+      # LOW INFORMATION
+      # ======================================================
+      
+      if (
+        n.variants < min.variants
+      ) {
         
         return(
-          data.frame(
+          tibble::tibble(
             population = current.group,
             n.variants = n.variants,
-            support.2n = NA,
-            support.3n = NA,
-            support.4n.outer = NA,
-            estimated.ploidy = NA,
-            call = "low_information",
-            stringsAsFactors = FALSE
+            n.informative.arms = NA_integer_,
+            support.2n = NA_real_,
+            support.3n = NA_real_,
+            support.3n.left = NA_real_,
+            support.3n.right = NA_real_,
+            triploid.arm.fraction = NA_real_,
+            estimated.ploidy = NA_real_,
+            call = "low_information"
           )
         )
       }
       
       
       # ======================================================
-      # DISTANCE FROM THEORETICAL VAF STATES
+      # GLOBAL SUPPORT
       # ======================================================
-      
-      d2 <- abs(
-        vaf - 1 / 2
-      )
-      
-      d3 <- pmin(
-        abs(vaf - 1 / 3),
-        abs(vaf - 2 / 3)
-      )
-      
-      # Evidence specific for tetraploidy.
-      #
-      # 0.5 cannot distinguish CN2 AB from CN4 AABB.
-      # Therefore only 0.25 / 0.75 are considered
-      # tetraploid-specific evidence.
-      d4.outer <- pmin(
-        abs(vaf - 1 / 4),
-        abs(vaf - 3 / 4)
-      )
-      
       
       support.2n <- mean(
-        d2 <= tolerance
+        abs(
+          df$AF - 0.5
+        ) <= tolerance
       )
       
-      support.3n <- mean(
-        d3 <= tolerance
+      
+      support.3n.left <- mean(
+        abs(
+          df$AF - 1/3
+        ) <= tolerance
       )
       
-      support.4n.outer <- mean(
-        d4.outer <= tolerance
+      
+      support.3n.right <- mean(
+        abs(
+          df$AF - 2/3
+        ) <= tolerance
       )
+      
+      
+      support.3n <-
+        support.3n.left +
+        support.3n.right
       
       
       # ======================================================
-      # CONSERVATIVE PLOIDY CALL
+      # ARM-LEVEL SUPPORT
+      #
+      # Each chromosome arm votes independently.
+      # This avoids heavily represented arms dominating
+      # the entire genome-wide ploidy call.
       # ======================================================
       
-      estimated.ploidy <- NA_real_
-      call <- "ambiguous"
+      arm.summary <- df %>%
+        
+        group_by(
+          arm
+        ) %>%
+        
+        filter(
+          n() >=
+            min.variants.per.arm
+        ) %>%
+        
+        summarise(
+          
+          n.snps = n(),
+          
+          support2 = mean(
+            abs(AF - 0.5)
+            <= tolerance
+          ),
+          
+          support3.left = mean(
+            abs(AF - 1/3)
+            <= tolerance
+          ),
+          
+          support3.right = mean(
+            abs(AF - 2/3)
+            <= tolerance
+          ),
+          
+          support3 =
+            support3.left +
+            support3.right,
+          
+          .groups = "drop"
+          
+        ) %>%
+        
+        mutate(
+          
+          state = case_when(
+            
+            support3 >
+              support2 + 0.10 ~
+              
+              "3n-like",
+            
+            support2 >
+              support3 + 0.10 ~
+              
+              "2n-like",
+            
+            TRUE ~
+              
+              "ambiguous"
+          )
+        )
       
       
-      # User-supplied known ploidy takes precedence
+      n.informative.arms <-
+        nrow(
+          arm.summary
+        )
+      
+      
       if (
-        !is.null(known.ploidy) &&
-        current.group %in% names(known.ploidy)
+        n.informative.arms <
+        min.informative.arms
       ) {
         
-        estimated.ploidy <-
-          known.ploidy[current.group]
+        return(
+          tibble::tibble(
+            population = current.group,
+            n.variants = n.variants,
+            n.informative.arms =
+              n.informative.arms,
+            support.2n = support.2n,
+            support.3n = support.3n,
+            support.3n.left =
+              support.3n.left,
+            support.3n.right =
+              support.3n.right,
+            triploid.arm.fraction =
+              NA_real_,
+            estimated.ploidy =
+              NA_real_,
+            call =
+              "low_arm_information"
+          )
+        )
+      }
+      
+      
+      triploid.arm.fraction <- mean(
+        arm.summary$state ==
+          "3n-like"
+      )
+      
+      
+      diploid.arm.fraction <- mean(
+        arm.summary$state ==
+          "2n-like"
+      )
+      
+      
+      # ======================================================
+      # STRICT TRIPLOID CALL
+      # ======================================================
+      
+      triploid.call <-
         
-        call <- "known"
+        # enough pooled 3n support
+        support.3n >= 0.35 &&
         
-      } else if (
+        # must clearly beat diploid support
+        support.3n >=
+        support.2n + 0.15 &&
         
-        support.3n >= 0.20 &&
-        support.3n >
-        support.4n.outer + 0.10
+        # both AAB and ABB patterns must exist
+        support.3n.left >= 0.10 &&
         
-      ) {
+        support.3n.right >= 0.10 &&
+        
+        # majority of chromosome arms must agree
+        triploid.arm.fraction >=
+        min.triploid.arm.fraction
+      
+      
+      # ======================================================
+      # DIPLOID CALL
+      # ======================================================
+      
+      diploid.call <-
+        
+        support.2n >= 0.35 &&
+        
+        support.2n >=
+        support.3n + 0.10 &&
+        
+        diploid.arm.fraction >= 0.40
+      
+      
+      # ======================================================
+      # FINAL CLASSIFICATION
+      # ======================================================
+      
+      if (triploid.call) {
         
         estimated.ploidy <- 3
         call <- "triploid"
         
-      } else if (
+      } else if (diploid.call) {
         
-        support.4n.outer >= 0.15
+        estimated.ploidy <- 2
+        call <- "diploid"
         
-      ) {
+      } else {
         
-        estimated.ploidy <- 4
-        call <- "tetraploid"
-        
-      } else if (
-        
-        support.2n >= 0.50 &&
-        support.3n < 0.15 &&
-        support.4n.outer < 0.10
-        
-      ) {
-        
-        # Important:
-        # AF=0.5 can represent either AB diploid
-        # or AABB balanced tetraploid.
-        #
-        # Do NOT automatically force CN2.
         estimated.ploidy <- NA_real_
-        call <- "diploid_or_balanced_tetraploid"
-        
+        call <- "ambiguous"
       }
       
       
-      data.frame(
-        population = current.group,
-        n.variants = n.variants,
-        support.2n = support.2n,
-        support.3n = support.3n,
-        support.4n.outer = support.4n.outer,
+      tibble::tibble(
+        
+        population =
+          current.group,
+        
+        n.variants =
+          n.variants,
+        
+        n.informative.arms =
+          n.informative.arms,
+        
+        support.2n =
+          support.2n,
+        
+        support.3n =
+          support.3n,
+        
+        support.3n.left =
+          support.3n.left,
+        
+        support.3n.right =
+          support.3n.right,
+        
+        triploid.arm.fraction =
+          triploid.arm.fraction,
+        
+        diploid.arm.fraction =
+          diploid.arm.fraction,
+        
         estimated.ploidy =
           estimated.ploidy,
-        call = call,
-        stringsAsFactors = FALSE
+        
+        call =
+          call
       )
     }
   )
   
-  results <- dplyr::bind_rows(
+  
+  dplyr::bind_rows(
     results
   )
-  
-  return(results)
 }
 
 .applyPloidyScaling <- function(
