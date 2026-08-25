@@ -376,22 +376,22 @@ estimatePloidyFromAF <- function(
       
       triploid.call <-
         
-        # enough pooled 3n support
-        support.3n >= 0.35 &&
+        # enough information
+        n.informative.arms >= min.informative.arms &&
         
-        # must clearly beat diploid support
-        support.3n >=
-        support.2n + 0.15 &&
+        # reasonable genome-wide evidence
+        support.3n >= 0.25 &&
         
-        # both AAB and ABB patterns must exist
-        support.3n.left >= 0.10 &&
+        # both AAB and ABB signatures must exist
+        support.3n.left >= 0.07 &&
+        support.3n.right >= 0.07 &&
         
-        support.3n.right >= 0.10 &&
+        # substantial fraction of arms must look triploid
+        triploid.arm.fraction >= 0.45 &&
         
-        # majority of chromosome arms must agree
+        # and triploid-like arms must outnumber diploid-like arms
         triploid.arm.fraction >=
-        min.triploid.arm.fraction
-      
+        diploid.arm.fraction + 0.08
       
       # ======================================================
       # DIPLOID CALL
@@ -399,12 +399,14 @@ estimatePloidyFromAF <- function(
       
       diploid.call <-
         
-        support.2n >= 0.35 &&
+        n.informative.arms >= min.informative.arms &&
         
-        support.2n >=
-        support.3n + 0.10 &&
+        support.2n >= 0.30 &&
         
-        diploid.arm.fraction >= 0.40
+        diploid.arm.fraction >= 0.45 &&
+        
+        diploid.arm.fraction >=
+        triploid.arm.fraction + 0.08
       
       
       # ======================================================
