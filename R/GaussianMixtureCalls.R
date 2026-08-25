@@ -309,80 +309,187 @@ calcGMMCopyNumber <- function(TapestriExperiment,
 }
 
 # get probabilities for belonging to a given component of the Gaussian mixture
-.calcClassPosteriors <- function(TapestriExperiment, 
-                                 cn.model.params, 
-                                 model.components,
-                                 model.priors, 
-                                 chromosome.scope,
-                                 prediction.assay = "smoothedCopyNumber") {
-  components.filtered <- paste0("sim_cn", model.components)
-
-  if (chromosome.scope == "chr" | chromosome.scope == "chromosome") {
-    sim.data.tidy <- getTidyData(TapestriExperiment,
+.calcClassPosteriors <- function(
+    TapestriExperiment,
+    cn.model.params,
+    model.components,
+    model.priors,
+    chromosome.scope,
+    prediction.assay = "smoothedCopyNumber"
+) {
+  
+  components.filtered <- paste0(
+    "sim_cn",
+    model.components
+  )
+  
+  # ==========================================================
+  # GET OBSERVED DATA
+  # ==========================================================
+  
+  if (
+    chromosome.scope == "chr" |
+    chromosome.scope == "chromosome"
+  ) {
+    
+    sim.data.tidy <- getTidyData(
+      TapestriExperiment,
       alt.exp = "smoothedCopyNumberByChr",
       assay = prediction.assay
     )
-  } else if (chromosome.scope == "arm") {
-    sim.data.tidy <- getTidyData(TapestriExperiment,
+    
+  } else if (
+    chromosome.scope == "arm"
+  ) {
+    
+    sim.data.tidy <- getTidyData(
+      TapestriExperiment,
       alt.exp = "smoothedCopyNumberByArm",
       assay = prediction.assay
     )
-  } else if (chromosome.scope == "cytoband") {
-    sim.data.tidy <- getTidyData(TapestriExperiment,
+    
+  } else if (
+    chromosome.scope == "cytoband"
+  ) {
+    
+    sim.data.tidy <- getTidyData(
+      TapestriExperiment,
       alt.exp = "smoothedCopyNumberByCytob",
       assay = prediction.assay
     )
+    
   } else {
-    cli::cli_abort("chromosome.scope should be 'chr', 'arm' or 'cytoband'")
+    
+    cli::cli_abort(
+      "chromosome.scope should be 'chr', 'arm' or 'cytoband'"
+    )
   }
   
-  sim.data.tidy <- sim.data.tidy %>% dplyr::transmute(feature.id,cell.barcode,smoothedCopyNumber =.data[[prediction.assay]])
-  
-  # get smoothed copy number and combine in tibble with copy number model parameters
-  smoothed.cn.df <- sim.data.tidy %>%
-    dplyr::select("feature.id", "cell.barcode", prediction.assay) %>%
-    tidyr::nest(.by = "feature.id", .key = "smoothed.cn")
-  cn.params.df <- cn.model.params %>%
-    dplyr::filter(.data$cn.sim.class %in% components.filtered) %>%
-    tidyr::nest(.by = "feature.id", .key = "model")
-  gmm.table <- dplyr::inner_join(smoothed.cn.df, cn.params.df, by = "feature.id")
   
   # ==========================================================
-  # CALCULATE PDF FOR EACH GMM COMPONENT
+  # STANDARDIZE VALUE COLUMN NAME
+  # ==========================================================
+  
+  sim.data.tidy <- sim.data.tidy %>%
+    dplyr::transmute(
+      feature.id,
+      cell.barcode,
+      smoothedCopyNumber = .data[[prediction.assay]]
+    )
+  
+  
+  # ==========================================================
+  # OBSERVED CN VALUES
+  # ==========================================================
+  
+  smoothed.cn.df <- sim.data.tidy %>%
+    dplyr::select(
+      feature.id,
+      cell.barcode,
+      smoothedCopyNumber
+    ) %>%
+    tidyr::nest(
+      .by = "feature.id",
+      .key = "smoothed.cn"
+    )
+  
+  
+  # ==========================================================
+  # GMM PARAMETERS
+  # ==========================================================
+  
+  cn.params.df <- cn.model.params %>%
+    dplyr::filter(
+      .data$cn.sim.class %in%
+        components.filtered
+    ) %>%
+    tidyr::nest(
+      .by = "feature.id",
+      .key = "model"
+    )
+  
+  
+  gmm.table <- dplyr::inner_join(
+    smoothed.cn.df,
+    cn.params.df,
+    by = "feature.id"
+  )
+  
+  
+  # ==========================================================
+  # PROBABILITY DENSITIES
   # ==========================================================
   
   gmm.table <- gmm.table %>%
     dplyr::mutate(
+      
       pdf = purrr::map2(
+        
         .data$smoothed.cn,
         .data$model,
-        function(smoothed.cn,model) {
+        
+        function(smoothed.cn, model) {
+          
           df <- purrr::pmap(
+            
             model,
-            function(cn.sim.class,mean,sd) {
+            
+            function(
+    cn.sim.class,
+    mean,
+    sd
+            ) {
+              
               stats::setNames(
+                
                 data.frame(
+                  
                   stats::dnorm(
                     smoothed.cn[["smoothedCopyNumber"]],
                     mean = mean,
-                    sd = sd)),
-                cn.sim.class)}) %>%purrr::list_cbind()
-          rownames(df) <- smoothed.cn[["cell.barcode"]]
-          df <- tibble::as_tibble(df)
-          return(df)}))
+                    sd = sd
+                  )
+                  
+                ),
+                
+                cn.sim.class
+              )
+            }
+    
+          ) %>%
+            purrr::list_cbind()
+          
+          
+          rownames(df) <-
+            smoothed.cn[["cell.barcode"]]
+          
+          
+          tibble::as_tibble(df)
+        }
+      )
+    )
+  
   
   # ==========================================================
-  # BAYES DENOMINATOR / MODEL EVIDENCE
+  # MODEL EVIDENCE
   # ==========================================================
   
   gmm.table <- gmm.table %>%
     dplyr::mutate(
+      
       model.evidence = purrr::map(
+        
         .data$pdf,
+        
         function(pdf) {
+          
           as.matrix(pdf) %*%
             model.priors %>%
-            drop()}))
+            drop()
+        }
+      )
+    )
+  
   
   # ==========================================================
   # POSTERIOR PROBABILITIES
@@ -390,17 +497,38 @@ calcGMMCopyNumber <- function(TapestriExperiment,
   
   gmm.table <- gmm.table %>%
     dplyr::mutate(
+      
       cn.probability = purrr::map2(
+        
         .data$pdf,
         .data$model.evidence,
-        function(pdf,model.evidence) {
-          probs <- sweep(pdf,2,model.priors,"*")
-          probs <- sweep(probs,1,model.evidence,"/")
-          probs <- tibble::as_tibble(probs)
+        
+        function(
+    pdf,
+    model.evidence
+        ) {
           
-          return(probs)}))
+          probs <- sweep(
+            pdf,
+            2,
+            model.priors,
+            "*"
+          )
+          
+          probs <- sweep(
+            probs,
+            1,
+            model.evidence,
+            "/"
+          )
+          
+          tibble::as_tibble(probs)
+        }
+      )
+    )
   
-  return(gmm.table
+  
+  return(gmm.table)
 }
 
 # assign copy numbers to data points by highest posterior probability
